@@ -119,16 +119,6 @@ Changelog:
   * Imported financial data: 5 income records, 5 subscriptions, 10 spending records
   * Created payment_sources and user_invitations tables
   * Total records migrated: 97 production records across 12 tables
-- June 19, 2025. Complete frontend route and session security implementation
-  * Built comprehensive AuthProvider with automatic token validation and session restoration
-  * Implemented role-based ProtectedRoute component with admin/super_admin vs viewer access control
-  * Created dedicated authentication pages at /auth/login and /auth/signup with proper navigation
-  * Added automatic redirect handling: authenticated users to dashboard, unauthenticated to login
-  * Enhanced error handling with toast notifications for expired tokens and unauthorized access
-  * Implemented secure logout functionality with context clearing and token removal
-  * Updated queryClient to include JWT Bearer tokens in all API requests
-  * Built professional landing page with feature highlights for unauthenticated users
-  * Protected all dashboard and settings routes with authentication and role-based restrictions
 ```
 
 ## User Preferences
