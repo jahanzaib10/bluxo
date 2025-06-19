@@ -1,0 +1,11 @@
+id,name,description,category,created_at
+0485f9e0-3ec3-4f4c-9358-7387f17a450b,manage_categories,"Create, edit, and delete categories",settings,2025-06-11 19:42:14.242302+00
+22c38868-a6a4-4d18-a050-6d6790819a67,manage_users,"Invite, edit, and manage users",users,2025-06-11 19:42:14.242302+00
+72c95037-4f8e-48e8-91fb-166ffcc73162,view_reports,View and export reports,reports,2025-06-11 19:42:14.242302+00
+8ca15448-89b3-45c7-bb38-3573ff800e19,manage_employees,"Create, edit, and delete employees",employees,2025-06-11 19:42:14.242302+00
+b7556db0-dd39-4df1-a2e2-f80082a2e76f,manage_settings,Modify application settings,settings,2025-06-11 19:42:14.242302+00
+bb75259c-a80e-4ca2-a617-ce5ddbafecfd,manage_income,"Create, edit, and delete income",income,2025-06-11 19:42:14.242302+00
+c4348892-cee2-47ac-86cc-be76f73df553,manage_clients,"Create, edit, and delete clients",clients,2025-06-11 19:42:14.242302+00
+d1b98711-e52a-4ea2-a712-e97de4d1b705,manage_expenses,"Create, edit, and delete expenses",expenses,2025-06-11 19:42:14.242302+00
+e78b47f9-cb36-43d7-a90e-b05b793e18fc,view_dashboard,View dashboard and analytics,dashboard,2025-06-11 19:42:14.242302+00
+f9754297-675d-4b1f-8abd-b09de62db206,manage_payment_sources,"Create, edit, and delete payment sources",settings,2025-06-11 19:42:14.242302+00

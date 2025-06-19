@@ -1,0 +1,4 @@
+id,user_id,account_id,first_name,last_name,phone,role,created_at,updated_at,status,last_login_at,avatar_url,timezone,language
+0ec3f900-d1e0-4482-9dd9-2122871d3af9,d16fcc2e-0832-46e8-b10e-303334ac2231,12ef97dd-95cd-4e79-80b2-65f626c24b04,Ashma,Jahanzaib,,admin,2025-06-11 23:01:15.206309+00,2025-06-11 23:01:15.206309+00,active,,,UTC,en
+30623f7d-aae5-4761-bce9-77c5406327e0,19ddb2f5-7be5-4189-9277-a08a05d73f76,288853f1-2983-46d4-8a6b-a3aa991e0986,Jay,!,,super_admin,2025-06-11 21:17:57.32056+00,2025-06-11 21:17:57.32056+00,active,,,UTC,en
+bd09b4b7-64d7-4fee-92e1-b446430c00a3,239adf37-4b41-49ea-ab5a-869ea477861b,12ef97dd-95cd-4e79-80b2-65f626c24b04,Jay,Q,+31645783698,super_admin,2025-06-10 02:57:24.527764+00,2025-06-10 02:58:18.03332+00,active,,,UTC,en

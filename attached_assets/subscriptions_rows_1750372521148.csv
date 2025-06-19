@@ -1,0 +1,2 @@
+id,name,amount,billing_cycle,next_due_date,payment_receiver_id,client_card_info,created_at,updated_at,created_by,archived,category_id,type,recurring_end_date
+9a9e7367-1a9d-4af9-ae9c-69f50950c2e1,Clickup,120,monthly,2025-06-30,,,2025-06-09 17:34:11.182671+00,2025-06-09 17:34:11.182671+00,239adf37-4b41-49ea-ab5a-869ea477861b,false,33333333-3333-3333-3333-333333333334,Company,
