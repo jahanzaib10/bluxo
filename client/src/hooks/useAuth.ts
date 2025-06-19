@@ -1,104 +1,91 @@
-import { useState, useEffect, createContext, useContext } from 'react';
-import { apiRequest } from '@/lib/queryClient';
-
-interface User {
-  id: string;
-  username: string;
-}
+import { createContext, useContext, useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { User, LoginInput, SignupInput } from "@shared/schema";
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  signup: (username: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
   isAuthenticated: boolean;
+  login: (data: LoginInput) => Promise<void>;
+  signup: (data: SignupInput) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
 
 export function useAuthProvider(): AuthContextType {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is already authenticated on mount
+  // Query to get current user
+  const { data: userData, isLoading } = useQuery({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Update user state when query data changes
   useEffect(() => {
-    checkAuth();
-  }, []);
+    setUser(userData || null);
+  }, [userData]);
 
-  const checkAuth = async () => {
-    try {
-      const userData = await apiRequest('GET', '/api/auth/me');
-      setUser(userData);
-    } catch (error) {
-      // User is not authenticated, which is fine
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const login = async (username: string, password: string) => {
-    try {
-      const response = await apiRequest('POST', '/api/auth/login', {
-        username,
-        password,
+  const loginMutation = useMutation({
+    mutationFn: async (data: LoginInput) => {
+      const response = await apiRequest("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify(data),
       });
-      
-      // Store token in localStorage as backup
-      if (response.token) {
-        localStorage.setItem('auth_token', response.token);
-      }
-      
-      setUser(response.user);
-    } catch (error: any) {
-      throw new Error(error.message || 'Login failed');
-    }
-  };
+      return response;
+    },
+    onSuccess: (data) => {
+      setUser(data.user);
+      queryClient.setQueryData(["/api/auth/me"], data.user);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    },
+  });
 
-  const signup = async (username: string, password: string) => {
-    try {
-      const response = await apiRequest('POST', '/api/auth/signup', {
-        username,
-        password,
+  const signupMutation = useMutation({
+    mutationFn: async (data: SignupInput) => {
+      const response = await apiRequest("/api/auth/signup", {
+        method: "POST",
+        body: JSON.stringify(data),
       });
-      
-      // Store token in localStorage as backup
-      if (response.token) {
-        localStorage.setItem('auth_token', response.token);
-      }
-      
-      setUser(response.user);
-    } catch (error: any) {
-      throw new Error(error.message || 'Signup failed');
-    }
-  };
+      return response;
+    },
+    onSuccess: (data) => {
+      setUser(data.user);
+      queryClient.setQueryData(["/api/auth/me"], data.user);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    },
+  });
 
-  const logout = async () => {
-    try {
-      await apiRequest('POST', '/api/auth/logout');
-    } catch (error) {
-      // Ignore logout errors
-    } finally {
-      localStorage.removeItem('auth_token');
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("/api/auth/logout", { method: "POST" });
+    },
+    onSuccess: () => {
       setUser(null);
-    }
-  };
+      queryClient.clear();
+    },
+  });
 
   return {
     user,
     isLoading,
-    login,
-    signup,
-    logout,
     isAuthenticated: !!user,
+    login: loginMutation.mutateAsync,
+    signup: signupMutation.mutateAsync,
+    logout: logoutMutation.mutateAsync,
   };
 }
+
+export { AuthContext };
