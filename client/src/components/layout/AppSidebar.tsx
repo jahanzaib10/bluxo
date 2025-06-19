@@ -1,4 +1,3 @@
-
 import {
   Sidebar,
   SidebarContent,
@@ -83,7 +82,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
             <DollarSign className="h-5 w-5 text-white flex-shrink-0" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-white truncate">Dartnox</h2>
+            <h2 className="text-lg font-semibold text-white truncate">FIN</h2>
             <p className="text-sm text-white/70 truncate">Finance Logger</p>
           </div>
         </div>
@@ -98,20 +97,19 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
                 const isActive = getCurrentPath() === item.path.replace('/', '')
                 return (
                   <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton 
-                      isActive={isActive}
+                    <SidebarMenuButton
                       onClick={() => handleNavigation(item)}
-                      tooltip={item.title}
                       className={`
-                        mx-1 mb-1 rounded-lg transition-all duration-200 text-white/80 hover:text-white
+                        w-full h-11 px-3 py-2 rounded-lg transition-all duration-200
+                        flex items-center gap-3 text-left
                         ${isActive 
-                          ? 'bg-white/15 text-white font-medium shadow-lg backdrop-blur-sm border border-white/20' 
-                          : 'hover:bg-white/10 hover:backdrop-blur-sm'
+                          ? 'bg-white/20 text-white backdrop-blur-sm shadow-lg' 
+                          : 'text-white/80 hover:bg-white/10 hover:text-white'
                         }
                       `}
                     >
-                      <item.icon className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{item.title}</span>
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      <span className="truncate font-medium">{item.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )
@@ -120,27 +118,19 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="border-t border-sidebar-border/20 bg-transparent">
-        <div className="p-2">
-          <SidebarMenuButton
-            onClick={toggleTheme}
-            tooltip={theme === "light" ? "Dark Mode" : "Light Mode"}
-            className="w-full justify-start mx-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200"
-          >
-            {theme === "light" ? (
-              <>
-                <Moon className="h-4 w-4 mr-2 flex-shrink-0" />
-                <span className="truncate">Dark Mode</span>
-              </>
-            ) : (
-              <>
-                <Sun className="h-4 w-4 mr-2 flex-shrink-0" />
-                <span className="truncate">Light Mode</span>
-              </>
-            )}
-          </SidebarMenuButton>
-        </div>
+      
+      <SidebarFooter className="border-t border-sidebar-border/20 bg-transparent p-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleTheme}
+          className="w-full justify-start gap-3 text-white/80 hover:bg-white/10 hover:text-white h-10"
+        >
+          {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          <span className="font-medium">
+            {theme === "light" ? "Dark Mode" : "Light Mode"}
+          </span>
+        </Button>
       </SidebarFooter>
     </Sidebar>
   )
