@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { IncomeTab } from './IncomeTab';
 import { ExpensesTab } from './ExpensesTab';
@@ -9,30 +8,32 @@ export function FinanceTab() {
   const [activeTab, setActiveTab] = useState('income');
 
   return (
-    <div className="w-full max-w-full h-screen flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-hidden">
-        <div className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="income">Income</TabsTrigger>
-              <TabsTrigger value="expenses">Expenses</TabsTrigger>
-              <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="income" className="h-full">
-              <IncomeTab />
-            </TabsContent>
-
-            <TabsContent value="expenses" className="h-full">
-              <ExpensesTab />
-            </TabsContent>
-
-            <TabsContent value="subscriptions" className="h-full">
-              <SubscriptionsTab />
-            </TabsContent>
-          </Tabs>
+    <div className="flex-1 overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+        <div className="border-b px-6 py-4">
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Finance</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            Manage your income, expenses, and subscriptions
+          </p>
+          <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsTrigger value="income">Income</TabsTrigger>
+            <TabsTrigger value="expenses">Expenses</TabsTrigger>
+            <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+          </TabsList>
         </div>
-      </div>
+        
+        <div className="flex-1 overflow-hidden">
+          <TabsContent value="income" className="h-full m-0">
+            <IncomeTab />
+          </TabsContent>
+          <TabsContent value="expenses" className="h-full m-0">
+            <ExpensesTab />
+          </TabsContent>
+          <TabsContent value="subscriptions" className="h-full m-0">
+            <SubscriptionsTab />
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }

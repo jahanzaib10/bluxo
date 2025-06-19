@@ -1,80 +1,97 @@
-
-import React from 'react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/components/auth/AuthProvider';
-import { Settings, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LogOut, Settings, User } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 export function ProfileDropdown() {
-  const { signOut, user } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
-      console.log('Attempting to sign out...');
-      await signOut();
-      
+      await apiRequest("POST", "/api/auth/logout");
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
-        title: "Signed out",
-        description: "You have been successfully signed out.",
+        title: "Success",
+        description: "Logged out successfully",
       });
-      
-      // Navigate to home page after successful logout
-      navigate('/');
+      navigate("/auth/login");
     } catch (error) {
-      console.error('Error signing out:', error);
-      
-      // Even if there's an error, still redirect to login page
-      // This handles cases where the session is invalid but we still want to "log out"
-      navigate('/');
-      
-      toast({
-        title: "Logged out",
-        description: "You have been logged out.",
-      });
+      // Even if logout fails on server, clear local state
+      localStorage.removeItem('auth_token');
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      navigate("/auth/login");
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
-  const getInitials = (email: string) => {
-    return email?.slice(0, 2).toUpperCase() || 'U';
+  const getInitials = (name?: string, email?: string) => {
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (email) {
+      return email.charAt(0).toUpperCase();
+    }
+    return 'U';
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
-              {getInitials(user?.email || '')}
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user?.profileImageUrl} alt={user?.name || user?.email || 'User'} />
+            <AvatarFallback>
+              {getInitials(user?.name, user?.email)}
             </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
-        <div className="flex items-center justify-start gap-2 p-2">
-          <div className="flex flex-col space-y-1 leading-none">
-            <p className="font-medium text-sm">{user?.email}</p>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">
+              {user?.name || 'User'}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {user?.email}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              Role: {user?.role}
+            </p>
           </div>
-        </div>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="cursor-pointer">
+        <DropdownMenuItem onClick={() => navigate('/settings')}>
           <Settings className="mr-2 h-4 w-4" />
-          <span>Account Settings</span>
+          <span>Settings</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="cursor-pointer" onClick={handleSignOut}>
+        <DropdownMenuItem 
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="text-red-600 focus:text-red-600"
+        >
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+          <span>{isLoggingOut ? 'Logging out...' : 'Log out'}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
