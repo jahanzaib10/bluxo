@@ -29,7 +29,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   });
 
   useEffect(() => {
-    setUser(userData || null);
+    setUser(userData as User || null);
   }, [userData]);
 
   const loginMutation = useMutation({
