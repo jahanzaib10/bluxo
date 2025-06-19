@@ -1,0 +1,125 @@
+I'm rebuilding my SaaS to support enterprise-grade user authentication, organization-based access, role-based permissions, and user invitations. Please follow these instructions carefully and build the full system end-to-end.
+
+---
+
+🧹 1. REMOVE ALL OLD AUTH + TENANT SYSTEM
+
+- Drop these PostgreSQL tables entirely:
+  - user_profiles
+  - user_invitations
+  - permissions
+  - role_permissions
+  - accounts
+
+- Delete all related frontend code:
+  - Supabase auth
+  - Old login/signup logic
+  - Invitations, account-based multi-tenancy
+  - Role/permission guards
+  - Context/session/auth utilities
+
+---
+
+🔐 2. IMPLEMENT ENTERPRISE AUTHENTICATION + USER MANAGEMENT
+
+✅ AUTHENTICATION:
+- Create new login/signup UI with modern design
+- Use JWT or secure cookie-based sessions
+- Implement hashed passwords and validation
+- Forgot password + reset flow
+- Email verification (optional for now)
+
+✅ USERS + ORGANIZATIONS:
+- Table: `organizations(id UUID, name TEXT, created_by UUID, created_at TIMESTAMP)`
+- Table: `users(id UUID, organization_id UUID, name TEXT, email TEXT UNIQUE, password TEXT, role TEXT, status TEXT, created_at TIMESTAMP)`
+- Roles: super_admin, admin, manager, employee, viewer
+- Each user belongs to 1 organization
+
+✅ INVITATION SYSTEM:
+- Admin can invite users by email
+- Store token and expiry in `user_invitations` table
+- Invited user sets password, accepts invitation, and joins organization
+- Support resending and invalidating tokens
+
+✅ AUTHORIZATION:
+- Use Express middleware to protect routes by role
+- Frontend should hide/disable features based on current user’s role
+- Example: viewer → readonly, admin → full access
+
+✅ SESSION MANAGEMENT:
+- Use localStorage or HttpOnly cookie
+- User stored in React context
+- Logout clears session and redirects
+
+---
+
+👤 3. ADD DEFAULT ORG + OWNER ACCOUNT
+
+✅ Insert default organization:
+- `name: Dartnox`
+
+✅ Create account owner:
+- Email: `jay@dartnox.com`
+- Password: `Jahanzeb#10` (hash it securely)
+- Role: `super_admin`
+- Link user to the Dartnox org
+
+✅ Owner can:
+- Log in
+- Access full dashboard
+- See and manage users, data, and settings
+
+---
+
+🔁 4. MIGRATE EXISTING DATA TO THE ORG
+
+✅ Add `organization_id UUID` column to:
+- categories
+- clients
+- employees
+- developers
+- income
+- spending
+- subscriptions
+- payment_sources
+
+✅ Update all existing rows to point to the Dartnox organization
+
+✅ Add foreign key constraints:
+- `organization_id REFERENCES organizations(id)`
+
+✅ Update all queries and API endpoints to return/filter data by the logged-in user's `organization_id`
+
+---
+
+🧩 5. FRONTEND STRUCTURE & UI CHANGES
+
+✅ Move the following out of `/settings` and into the main sidebar:
+- `/settings/payment-sources` → `Payment Sources`
+- `/settings/categories` → `Categories`
+
+✅ Redesign Settings section with nested routes:
+- `/settings`
+   - General
+   - User Management
+   - Organization Profile
+   - Security (future)
+
+✅ Create new UI pages:
+- Login
+- Signup
+- Forgot Password
+- Accept Invitation
+- Invite Users
+- Manage Users (roles, status, resend invite)
+
+---
+
+🛠 TECH STACK:
+- Express (backend)
+- PostgreSQL
+- React + TypeScript + Tailwind
+- TanStack Query
+- Modern UI + role-based access
+
+Please implement this as one cohesive and production-grade system. The app must compile successfully, route correctly, and enable full end-to-end flows from signup to user invites to permission-based access.
