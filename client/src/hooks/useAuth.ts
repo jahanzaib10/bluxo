@@ -35,13 +35,12 @@ export function useAuthProvider(): AuthContextType {
 
   // Update user state when query data changes
   useEffect(() => {
-    setUser(userData || null);
+    setUser((userData as User) || null);
   }, [userData]);
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginInput) => {
-      const response = await apiRequest("/api/auth/login", {
-        method: "POST",
+      const response = await apiRequest("POST", "/api/auth/login", {
         body: JSON.stringify(data),
       });
       return response;
@@ -55,8 +54,7 @@ export function useAuthProvider(): AuthContextType {
 
   const signupMutation = useMutation({
     mutationFn: async (data: SignupInput) => {
-      const response = await apiRequest("/api/auth/signup", {
-        method: "POST",
+      const response = await apiRequest("POST", "/api/auth/signup", {
         body: JSON.stringify(data),
       });
       return response;
@@ -70,7 +68,7 @@ export function useAuthProvider(): AuthContextType {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("/api/auth/logout", { method: "POST" });
+      await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
       setUser(null);

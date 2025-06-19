@@ -83,32 +83,45 @@ export const employeesRelations = relations(employees, ({ one }) => ({
 }));
 
 // Insert schemas
-export const insertAccountSchema = createInsertSchema(accounts).omit({
+export const insertAccountSchema = createInsertSchema(accounts, {
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
+}).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
+  created_at: true,
+  updated_at: true,
 });
 
-export const insertCategorySchema = createInsertSchema(categories).omit({
+export const insertCategorySchema = createInsertSchema(categories, {
+  created_at: z.coerce.date().optional(),
+}).omit({
   id: true,
-  createdAt: true,
+  created_at: true,
 });
 
-export const insertClientSchema = createInsertSchema(clients).omit({
+export const insertClientSchema = createInsertSchema(clients, {
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
+}).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
+  created_at: true,
+  updated_at: true,
 });
 
-export const insertDeveloperSchema = createInsertSchema(developers).omit({
+export const insertDeveloperSchema = createInsertSchema(developers, {
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
+}).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
+  created_at: true,
+  updated_at: true,
 });
 
-export const insertEmployeeSchema = createInsertSchema(employees).omit({
+export const insertEmployeeSchema = createInsertSchema(employees, {
+  created_at: z.coerce.date().optional(),
+}).omit({
   id: true,
-  createdAt: true,
+  created_at: true,
 });
 
 // Types
