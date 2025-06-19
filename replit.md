@@ -112,6 +112,13 @@ Changelog:
   * Added HTTP-only cookie support with localStorage backup
   * Protected all API endpoints with JWT authentication middleware
   * Replaced Supabase AuthProvider with custom JWT authentication context
+- June 19, 2025. Complete Supabase production data migration
+  * Successfully imported all 12 CSV files from Supabase export
+  * Migrated 2 accounts, 48 categories, 3 clients, 3 employees
+  * Added user management tables: user_profiles, permissions, role_permissions
+  * Imported financial data: 5 income records, 5 subscriptions, 10 spending records
+  * Created payment_sources and user_invitations tables
+  * Total records migrated: 97 production records across 12 tables
 ```
 
 ## User Preferences
