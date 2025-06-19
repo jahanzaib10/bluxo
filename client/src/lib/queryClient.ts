@@ -44,7 +44,19 @@ export async function apiRequest(
     return {};
   }
 
-  return res.json();
+  const responseData = await res.json();
+
+  // Store token if this is a login response
+  if (url.includes('/auth/login') && responseData.token) {
+    localStorage.setItem('auth_token', responseData.token);
+  }
+
+  // Clear token if this is a logout response
+  if (url.includes('/auth/logout')) {
+    localStorage.removeItem('auth_token');
+  }
+
+  return responseData;
 }
 
 export const queryClient = new QueryClient({

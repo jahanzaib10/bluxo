@@ -42,9 +42,10 @@ export function LoginForm() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      await apiRequest("POST", "/api/auth/login", data);
+      const response = await apiRequest("POST", "/api/auth/login", data);
       
-      // Invalidate auth query to refetch user data
+      // Token is automatically stored by apiRequest
+      // Invalidate auth query to refetch user data with new token
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       toast({
@@ -52,8 +53,10 @@ export function LoginForm() {
         description: "Logged in successfully",
       });
       
-      // Navigate to dashboard
-      navigate("/dashboard");
+      // Small delay to ensure token is available for next request
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 100);
     } catch (error) {
       toast({
         title: "Error",

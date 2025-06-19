@@ -2,6 +2,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -9,6 +10,7 @@ export default function Dashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -26,17 +28,18 @@ export default function Dashboard() {
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout");
+      // Clear the cached auth query
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "Success",
         description: "Logged out successfully",
       });
       navigate("/auth/login");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to log out",
-        variant: "destructive",
-      });
+      // Even if logout fails on server, clear local state
+      localStorage.removeItem('auth_token');
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      navigate("/auth/login");
     }
   };
 
