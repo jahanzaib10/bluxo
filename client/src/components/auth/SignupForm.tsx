@@ -10,7 +10,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { signupSchema, type SignupInput } from "@shared/schema";
 
 interface SignupFormProps {
-  onSwitchToLogin: () => void;
+  onSwitchToLogin?: () => void;
 }
 
 export function SignupForm({ onSwitchToLogin }: SignupFormProps) {

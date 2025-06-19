@@ -1,33 +1,62 @@
-
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from './AuthProvider';
-import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredRoles?: string[];
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
+  const { user, isLoading, isAuthenticated } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && !user) {
-      console.log('User not authenticated, redirecting to login');
-      navigate('/', { replace: true });
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to access this page.",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/auth/login";
+      }, 500);
+      return;
     }
-  }, [user, loading, navigate]);
 
-  if (loading) {
+    if (!isLoading && isAuthenticated && requiredRoles && user) {
+      const hasRequiredRole = requiredRoles.includes(user.role);
+      if (!hasRequiredRole) {
+        toast({
+          title: "Access Denied",
+          description: "You don't have permission to access this page.",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 500);
+        return;
+      }
+    }
+  }, [isLoading, isAuthenticated, user, requiredRoles, toast]);
+
+  // Show loading while checking authentication
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
-  if (!user) {
-    return null; // Will redirect via useEffect
+  // Don't render children if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Don't render children if role check fails
+  if (requiredRoles && user && !requiredRoles.includes(user.role)) {
+    return null;
   }
 
   return <>{children}</>;
