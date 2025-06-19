@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import cookieParser from "cookie-parser";
 import { storage } from "./storage";
+import { authenticateToken, login, signup, logout, getCurrentUser, type AuthRequest } from "./auth";
 import { 
   insertAccountSchema, 
   insertCategorySchema, 
@@ -11,8 +13,16 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Accounts routes
-  app.get("/api/accounts", async (req, res) => {
+  // Add cookie parser middleware
+  app.use(cookieParser());
+
+  // Authentication routes (unprotected)
+  app.post("/api/auth/login", login);
+  app.post("/api/auth/signup", signup);
+  app.post("/api/auth/logout", logout);
+  app.get("/api/auth/me", authenticateToken, getCurrentUser);
+  // Protected Accounts routes
+  app.get("/api/accounts", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const accounts = await storage.getAccounts();
       res.json(accounts);
@@ -21,7 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/accounts/:id", async (req, res) => {
+  app.get("/api/accounts/:id", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const account = await storage.getAccount(req.params.id);
       if (!account) {
@@ -33,9 +43,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/accounts", async (req, res) => {
+  app.post("/api/accounts", authenticateToken, async (req: AuthRequest, res) => {
     try {
-      const validatedData = insertAccountSchema.parse(req.body);
+      const validatedData = insertAccountSchema.parse({
+        ...req.body,
+        created_by: req.user?.id
+      });
       const account = await storage.createAccount(validatedData);
       res.status(201).json(account);
     } catch (error) {
@@ -46,7 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/accounts/:id", async (req, res) => {
+  app.put("/api/accounts/:id", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const validatedData = insertAccountSchema.partial().parse(req.body);
       const account = await storage.updateAccount(req.params.id, validatedData);
@@ -62,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/accounts/:id", async (req, res) => {
+  app.delete("/api/accounts/:id", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const deleted = await storage.deleteAccount(req.params.id);
       if (!deleted) {
@@ -74,8 +87,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Categories routes
-  app.get("/api/categories", async (req, res) => {
+  // Protected Categories routes
+  app.get("/api/categories", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const categories = await storage.getCategories();
       res.json(categories);
@@ -84,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/categories/:id", async (req, res) => {
+  app.get("/api/categories/:id", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const category = await storage.getCategory(req.params.id);
       if (!category) {
@@ -96,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/categories", async (req, res) => {
+  app.post("/api/categories", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const validatedData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(validatedData);
