@@ -1,45 +1,136 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Dashboard from "@/pages/dashboard";
-import Accounts from "@/pages/accounts";
-import Categories from "@/pages/categories";
-import Clients from "@/pages/clients";
-import Developers from "@/pages/developers";
-import Employees from "@/pages/employees";
-import NotFound from "@/pages/not-found";
-import Sidebar from "@/components/layout/sidebar";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import Index from "./pages/Index";
+import Dashboard from "./pages/dashboard";
+import InviteAcceptance from "./pages/InviteAcceptance";
+import DebugInvitation from "./pages/DebugInvitation";
+import NotFound from "./pages/NotFound";
+import { Settings } from "./pages/settings/Settings";
 
-function Router() {
-  return (
-    <div className="flex h-screen bg-surface-background">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/accounts" component={Accounts} />
-          <Route path="/categories" component={Categories} />
-          <Route path="/clients" component={Clients} />
-          <Route path="/developers" component={Developers} />
-          <Route path="/employees" component={Employees} />
-          <Route component={NotFound} />
-        </Switch>
-      </div>
-    </div>
-  );
-}
+const queryClient = new QueryClient();
 
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
         <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-}
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/invite/:token" element={<InviteAcceptance />} />
+              <Route path="/debug-invitation" element={<DebugInvitation />} />
+              
+              {/* Settings routes - put these before dashboard routes to avoid conflicts */}
+              <Route 
+                path="/settings" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Settings />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/settings/categories" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Settings />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/settings/payment-sources" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Settings />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/settings/user-management" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Settings />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Dashboard routes */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Dashboard tab="overview" />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/overview" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Dashboard tab="overview" />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/finance" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Dashboard tab="finance" />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/clients" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Dashboard tab="clients" />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/employees" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Dashboard tab="employees" />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
