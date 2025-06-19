@@ -7,37 +7,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { loginSchema, type LoginInput } from "@shared/schema";
+import { signupSchema, type SignupInput } from "@shared/schema";
 
-interface LoginFormProps {
-  onSwitchToSignup?: () => void;
+interface SignupFormProps {
+  onSwitchToLogin?: () => void;
 }
 
-export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
-  const { login } = useAuth();
+export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
+  const { signup } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<SignupInput>({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
+      name: "",
       email: "",
       password: "",
+      organizationName: "",
     },
   });
 
-  async function onSubmit(data: LoginInput) {
+  async function onSubmit(data: SignupInput) {
     setIsLoading(true);
     try {
-      await login(data);
+      await signup(data);
       toast({
-        title: "Welcome back!",
-        description: "You have been logged in successfully.",
+        title: "Account created!",
+        description: "Your organization has been set up successfully.",
       });
     } catch (error: any) {
       toast({
-        title: "Login failed",
-        description: error.message || "Invalid email or password",
+        title: "Signup failed",
+        description: error.message || "Failed to create account",
         variant: "destructive",
       });
     } finally {
@@ -48,14 +50,30 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Sign in</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">Create account</CardTitle>
         <CardDescription className="text-center">
-          Enter your email and password to access your account
+          Start your organization and invite your team
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="John Doe"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="email"
@@ -75,6 +93,22 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
             />
             <FormField
               control={form.control}
+              name="organizationName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Organization Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Acme Corp"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="password"
               render={({ field }) => (
                 <FormItem>
@@ -82,7 +116,7 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="Enter your password"
+                      placeholder="Create a secure password"
                       {...field}
                     />
                   </FormControl>
@@ -91,17 +125,17 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
               )}
             />
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
         </Form>
         <div className="mt-4 text-center">
           <Button
             variant="link"
-            onClick={onSwitchToSignup}
+            onClick={onSwitchToLogin}
             className="text-sm"
           >
-            Don't have an account? Sign up
+            Already have an account? Sign in
           </Button>
         </div>
       </CardContent>

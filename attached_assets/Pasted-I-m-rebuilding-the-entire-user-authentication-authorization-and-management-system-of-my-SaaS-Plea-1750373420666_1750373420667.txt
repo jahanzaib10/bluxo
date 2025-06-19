@@ -1,0 +1,85 @@
+I’m rebuilding the entire user authentication, authorization, and management system of my SaaS. Please follow these detailed instructions and apply them carefully:
+
+---
+
+🧹 1. REMOVE ALL OLD AUTH CODE + TABLES
+
+- Drop these PostgreSQL tables entirely:
+  - user_profiles
+  - user_invitations
+  - permissions
+  - role_permissions
+  - accounts
+
+- Delete all frontend pages/components and backend logic related to:
+  - Supabase auth
+  - user invitations
+  - role/permission tables
+  - account-based multi-tenancy
+  - old auth guards, user context, or login/signup flows
+
+---
+
+🚀 2. IMPLEMENT A MODERN ENTERPRISE USER MANAGEMENT SYSTEM
+
+Use a professional JWT-based or session-based authentication system. Requirements:
+
+🔐 **Authentication**
+- Secure Signup and Login pages with modern design
+- Password hashing and validation
+- Session storage (cookie or token-based)
+- Forgot password / reset flow
+- Email verification (mocked for now is fine)
+
+🙋‍♂️ **Organization + User Model**
+- Organizations table: `id, name, created_by`
+- Users table: `id, org_id, name, email, role, status, created_at`
+- Roles: super_admin, admin, manager, employee, viewer
+- Each user belongs to 1 org and sees only org data
+
+📨 **Invitations**
+- Admins can invite users by email
+- Users receive invitation link with token
+- Accept invite → set password → join org
+- Expiry and re-invite supported
+
+✅ **Authorization**
+- Use middleware to restrict access based on role and permissions
+- Protect API endpoints (e.g. only admin can invite, viewer can read only)
+- Frontend should hide/show UI based on permissions
+
+🪪 **User Session**
+- Logged-in user info stored in React context
+- Persistent session via cookie or localStorage
+- Logout clears session and redirects
+
+---
+
+🧩 3. UI & PAGES RESTRUCTURING
+
+✅ Move these pages out of `Settings` and into sidebar:
+- `/settings/payment-sources` → `Payment Sources`
+- `/settings/categories` → `Categories`
+
+✅ Refactor Settings into a proper nested section:
+- `/settings`
+   - General
+   - User Management
+   - Org Profile
+   - Security (future)
+- Sidebar should show “Settings” with collapsible sub-items
+
+✅ Create new modern designs for:
+- Login
+- Signup
+- Accept Invite
+- Forgot Password
+- User Management (with roles and actions)
+
+---
+
+Please implement all of this as one cohesive system — frontend + backend + DB.
+
+Use Express + PostgreSQL + React + Tailwind + TanStack Query. Ensure clean file structure, modern UI, protected routes, and solid data integrity.
+
+Make sure everything compiles and routes properly once you're done.

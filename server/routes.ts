@@ -2,340 +2,329 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import cookieParser from "cookie-parser";
 import { storage } from "./storage";
-import { authenticateToken, login, signup, logout, getCurrentUser, type AuthRequest } from "./auth";
+import { authenticate, authorize, requireRole, generateToken, hashPassword, verifyPassword, type AuthRequest } from "./auth";
 import { 
-  insertAccountSchema, 
-  insertCategorySchema, 
-  insertClientSchema, 
-  insertDeveloperSchema, 
-  insertEmployeeSchema 
+  loginSchema, 
+  signupSchema, 
+  inviteUserSchema, 
+  acceptInviteSchema, 
+  forgotPasswordSchema, 
+  resetPasswordSchema 
 } from "@shared/schema";
-import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Add cookie parser middleware
   app.use(cookieParser());
 
-  // Authentication routes (unprotected)
-  app.post("/api/auth/login", login);
-  app.post("/api/auth/signup", signup);
-  app.post("/api/auth/logout", logout);
-  app.get("/api/auth/me", authenticateToken, getCurrentUser);
-  // Protected Accounts routes
-  app.get("/api/accounts", authenticateToken, async (req: AuthRequest, res) => {
+  // Public auth routes
+  app.post("/api/auth/login", async (req, res) => {
     try {
-      const accounts = await storage.getAccounts();
-      res.json(accounts);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch accounts" });
-    }
-  });
+      const { email, password } = loginSchema.parse(req.body);
 
-  app.get("/api/accounts/:id", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const account = await storage.getAccount(req.params.id);
-      if (!account) {
-        return res.status(404).json({ message: "Account not found" });
+      const user = await storage.getUserByEmail(email);
+      if (!user || !await verifyPassword(password, user.passwordHash)) {
+        return res.status(401).json({ message: "Invalid email or password" });
       }
-      res.json(account);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch account" });
-    }
-  });
 
-  app.post("/api/accounts", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const validatedData = insertAccountSchema.parse({
-        ...req.body,
-        created_by: req.user?.id
+      if (user.status !== "active") {
+        return res.status(401).json({ message: "Account is not active" });
+      }
+
+      const token = generateToken(user);
+      
+      res.cookie("auth_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
-      const account = await storage.createAccount(validatedData);
-      res.status(201).json(account);
+
+      res.json({ 
+        user: { 
+          id: user.id, 
+          name: user.name, 
+          email: user.email, 
+          role: user.role, 
+          orgId: user.orgId 
+        } 
+      });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create account" });
+      res.status(400).json({ message: "Invalid request data" });
     }
   });
 
-  app.put("/api/accounts/:id", authenticateToken, async (req: AuthRequest, res) => {
+  app.post("/api/auth/signup", async (req, res) => {
     try {
-      const validatedData = insertAccountSchema.partial().parse(req.body);
-      const account = await storage.updateAccount(req.params.id, validatedData);
-      if (!account) {
-        return res.status(404).json({ message: "Account not found" });
+      const { name, email, password, organizationName } = signupSchema.parse(req.body);
+
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists" });
       }
-      res.json(account);
+
+      const passwordHash = await hashPassword(password);
+
+      // Create organization first
+      const org = await storage.createOrganization({
+        name: organizationName,
+      });
+
+      // Create user as admin of the organization
+      const user = await storage.createUser({
+        orgId: org.id,
+        name,
+        email,
+        passwordHash,
+        role: "admin",
+        status: "active",
+        emailVerified: true,
+      });
+
+      // Update organization's created_by field
+      await storage.updateOrganization(org.id, { createdBy: user.id });
+
+      const token = generateToken(user);
+      
+      res.cookie("auth_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      res.status(201).json({ 
+        user: { 
+          id: user.id, 
+          name: user.name, 
+          email: user.email, 
+          role: user.role, 
+          orgId: user.orgId 
+        } 
+      });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update account" });
+      res.status(400).json({ message: "Invalid request data" });
     }
   });
 
-  app.delete("/api/accounts/:id", authenticateToken, async (req: AuthRequest, res) => {
+  app.post("/api/auth/logout", (req, res) => {
+    res.clearCookie("auth_token");
+    res.json({ message: "Logged out successfully" });
+  });
+
+  app.get("/api/auth/me", authenticate, async (req: AuthRequest, res) => {
     try {
-      const deleted = await storage.deleteAccount(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Account not found" });
+      const user = await storage.getUserById(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
-      res.status(204).send();
+
+      res.json({ 
+        id: user.id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role, 
+        orgId: user.orgId 
+      });
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete account" });
+      res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
-  // Protected Categories routes
-  app.get("/api/categories", authenticateToken, async (req: AuthRequest, res) => {
+  // User invitation routes
+  app.post("/api/users/invite", authenticate, requireRole("admin"), async (req: AuthRequest, res) => {
     try {
-      const categories = await storage.getCategories();
+      const { email, role } = inviteUserSchema.parse(req.body);
+
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+
+      const invitation = await storage.createInvitation({
+        orgId: req.user!.orgId,
+        email,
+        role,
+        invitedBy: req.user!.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      });
+
+      res.status(201).json({ invitation });
+    } catch (error) {
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  app.get("/api/invitations/:token", async (req, res) => {
+    try {
+      const invitation = await storage.getInvitationByToken(req.params.token);
+      
+      if (!invitation || invitation.acceptedAt || invitation.expiresAt < new Date()) {
+        return res.status(404).json({ message: "Invalid or expired invitation" });
+      }
+
+      res.json({ 
+        email: invitation.email, 
+        role: invitation.role, 
+        orgId: invitation.orgId 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch invitation" });
+    }
+  });
+
+  app.post("/api/invitations/:token/accept", async (req, res) => {
+    try {
+      const { name, password } = acceptInviteSchema.parse(req.body);
+      
+      const invitation = await storage.getInvitationByToken(req.params.token);
+      if (!invitation || invitation.acceptedAt || invitation.expiresAt < new Date()) {
+        return res.status(404).json({ message: "Invalid or expired invitation" });
+      }
+
+      const passwordHash = await hashPassword(password);
+
+      const user = await storage.createUser({
+        orgId: invitation.orgId,
+        name,
+        email: invitation.email,
+        passwordHash,
+        role: invitation.role,
+        status: "active",
+        emailVerified: true,
+      });
+
+      await storage.acceptInvitation(req.params.token);
+
+      const token = generateToken(user);
+      
+      res.cookie("auth_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      res.status(201).json({ 
+        user: { 
+          id: user.id, 
+          name: user.name, 
+          email: user.email, 
+          role: user.role, 
+          orgId: user.orgId 
+        } 
+      });
+    } catch (error) {
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  // User management routes
+  app.get("/api/users", authenticate, requireRole("manager"), async (req: AuthRequest, res) => {
+    try {
+      const users = await storage.getUsersByOrganization(req.user!.orgId);
+      res.json(users.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt,
+      })));
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get("/api/invitations", authenticate, requireRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const invitations = await storage.getInvitationsByOrganization(req.user!.orgId);
+      res.json(invitations);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // Protected business data routes with organization filtering
+  app.get("/api/categories", authenticate, async (req: AuthRequest, res) => {
+    try {
+      const categories = await storage.getCategories(req.user!.orgId);
       res.json(categories);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch categories" });
     }
   });
 
-  app.get("/api/categories/:id", authenticateToken, async (req: AuthRequest, res) => {
+  app.post("/api/categories", authenticate, requireRole("manager"), async (req: AuthRequest, res) => {
     try {
-      const category = await storage.getCategory(req.params.id);
-      if (!category) {
-        return res.status(404).json({ message: "Category not found" });
-      }
-      res.json(category);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch category" });
-    }
-  });
-
-  app.post("/api/categories", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const validatedData = insertCategorySchema.parse(req.body);
-      const category = await storage.createCategory(validatedData);
+      const category = await storage.createCategory({
+        ...req.body,
+        createdBy: req.user!.orgId,
+      });
       res.status(201).json(category);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create category" });
+      res.status(400).json({ message: "Failed to create category" });
     }
   });
 
-  app.put("/api/categories/:id", async (req, res) => {
+  app.get("/api/clients", authenticate, async (req: AuthRequest, res) => {
     try {
-      const validatedData = insertCategorySchema.partial().parse(req.body);
-      const category = await storage.updateCategory(req.params.id, validatedData);
-      if (!category) {
-        return res.status(404).json({ message: "Category not found" });
-      }
-      res.json(category);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update category" });
-    }
-  });
-
-  app.delete("/api/categories/:id", async (req, res) => {
-    try {
-      const deleted = await storage.deleteCategory(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Category not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete category" });
-    }
-  });
-
-  // Clients routes
-  app.get("/api/clients", async (req, res) => {
-    try {
-      const clients = await storage.getClients();
+      const clients = await storage.getClients(req.user!.orgId);
       res.json(clients);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch clients" });
     }
   });
 
-  app.get("/api/clients/:id", async (req, res) => {
+  app.post("/api/clients", authenticate, requireRole("manager"), async (req: AuthRequest, res) => {
     try {
-      const client = await storage.getClient(req.params.id);
-      if (!client) {
-        return res.status(404).json({ message: "Client not found" });
-      }
-      res.json(client);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch client" });
-    }
-  });
-
-  app.post("/api/clients", async (req, res) => {
-    try {
-      const validatedData = insertClientSchema.parse(req.body);
-      const client = await storage.createClient(validatedData);
+      const client = await storage.createClient({
+        ...req.body,
+        createdBy: req.user!.orgId,
+      });
       res.status(201).json(client);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create client" });
+      res.status(400).json({ message: "Failed to create client" });
     }
   });
 
-  app.put("/api/clients/:id", async (req, res) => {
+  app.get("/api/employees", authenticate, async (req: AuthRequest, res) => {
     try {
-      const validatedData = insertClientSchema.partial().parse(req.body);
-      const client = await storage.updateClient(req.params.id, validatedData);
-      if (!client) {
-        return res.status(404).json({ message: "Client not found" });
-      }
-      res.json(client);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update client" });
-    }
-  });
-
-  app.delete("/api/clients/:id", async (req, res) => {
-    try {
-      const deleted = await storage.deleteClient(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Client not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete client" });
-    }
-  });
-
-  // Developers routes
-  app.get("/api/developers", async (req, res) => {
-    try {
-      const developers = await storage.getDevelopers();
-      res.json(developers);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch developers" });
-    }
-  });
-
-  app.get("/api/developers/:id", async (req, res) => {
-    try {
-      const developer = await storage.getDeveloper(req.params.id);
-      if (!developer) {
-        return res.status(404).json({ message: "Developer not found" });
-      }
-      res.json(developer);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch developer" });
-    }
-  });
-
-  app.post("/api/developers", async (req, res) => {
-    try {
-      const validatedData = insertDeveloperSchema.parse(req.body);
-      const developer = await storage.createDeveloper(validatedData);
-      res.status(201).json(developer);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create developer" });
-    }
-  });
-
-  app.put("/api/developers/:id", async (req, res) => {
-    try {
-      const validatedData = insertDeveloperSchema.partial().parse(req.body);
-      const developer = await storage.updateDeveloper(req.params.id, validatedData);
-      if (!developer) {
-        return res.status(404).json({ message: "Developer not found" });
-      }
-      res.json(developer);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update developer" });
-    }
-  });
-
-  app.delete("/api/developers/:id", async (req, res) => {
-    try {
-      const deleted = await storage.deleteDeveloper(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Developer not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete developer" });
-    }
-  });
-
-  // Employees routes
-  app.get("/api/employees", async (req, res) => {
-    try {
-      const employees = await storage.getEmployees();
+      const employees = await storage.getEmployees(req.user!.orgId);
       res.json(employees);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch employees" });
     }
   });
 
-  app.get("/api/employees/:id", async (req, res) => {
+  app.post("/api/employees", authenticate, requireRole("manager"), async (req: AuthRequest, res) => {
     try {
-      const employee = await storage.getEmployee(req.params.id);
-      if (!employee) {
-        return res.status(404).json({ message: "Employee not found" });
-      }
-      res.json(employee);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch employee" });
-    }
-  });
-
-  app.post("/api/employees", async (req, res) => {
-    try {
-      const validatedData = insertEmployeeSchema.parse(req.body);
-      const employee = await storage.createEmployee(validatedData);
+      const employee = await storage.createEmployee({
+        ...req.body,
+        createdBy: req.user!.orgId,
+      });
       res.status(201).json(employee);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create employee" });
+      res.status(400).json({ message: "Failed to create employee" });
     }
   });
 
-  app.put("/api/employees/:id", async (req, res) => {
+  app.get("/api/developers", authenticate, async (req: AuthRequest, res) => {
     try {
-      const validatedData = insertEmployeeSchema.partial().parse(req.body);
-      const employee = await storage.updateEmployee(req.params.id, validatedData);
-      if (!employee) {
-        return res.status(404).json({ message: "Employee not found" });
-      }
-      res.json(employee);
+      const developers = await storage.getDevelopers(req.user!.orgId);
+      res.json(developers);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update employee" });
+      res.status(500).json({ message: "Failed to fetch developers" });
     }
   });
 
-  app.delete("/api/employees/:id", async (req, res) => {
+  app.post("/api/developers", authenticate, requireRole("manager"), async (req: AuthRequest, res) => {
     try {
-      const deleted = await storage.deleteEmployee(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Employee not found" });
-      }
-      res.status(204).send();
+      const developer = await storage.createDeveloper({
+        ...req.body,
+        createdBy: req.user!.orgId,
+      });
+      res.status(201).json(developer);
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete employee" });
+      res.status(400).json({ message: "Failed to create developer" });
     }
   });
 

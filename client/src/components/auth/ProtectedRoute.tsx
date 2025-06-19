@@ -1,33 +1,56 @@
-
-import React, { useEffect } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
-import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children: ReactNode;
+  requiredRoles?: string[];
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+export function ProtectedRoute({ children, requiredRoles = [] }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, user, hasRole } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && !user) {
-      console.log('User not authenticated, redirecting to login');
-      navigate('/', { replace: true });
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to access this page.",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/auth/login";
+      }, 500);
     }
-  }, [user, loading, navigate]);
+  }, [isAuthenticated, isLoading, toast]);
 
-  if (loading) {
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && requiredRoles.length > 0 && !hasRole(requiredRoles)) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access this page.",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
+    }
+  }, [isAuthenticated, isLoading, user, requiredRoles, hasRole, toast]);
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
-  if (!user) {
-    return null; // Will redirect via useEffect
+  if (!isAuthenticated) {
+    return null; // Will redirect to login
+  }
+
+  if (requiredRoles.length > 0 && !hasRole(requiredRoles)) {
+    return null; // Will redirect to dashboard
   }
 
   return <>{children}</>;
