@@ -24,7 +24,14 @@ export async function apiRequest(
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include", // Include cookies for HTTP-only auth
   };
+
+  // Add authorization header if token exists in localStorage
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    (options.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  }
 
   if (data) {
     options.body = JSON.stringify(data);
