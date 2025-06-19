@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { LoginForm } from '@/components/auth/LoginForm';
-import { SignUpForm } from '@/components/auth/SignUpForm';
+import { SignupForm } from '@/components/auth/SignupForm';
 import { DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -52,9 +52,9 @@ function AuthScreen() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-card py-8 px-4 shadow sm:rounded-lg sm:px-10 border">
           {isSignUp ? (
-            <SignUpForm onToggleMode={() => setIsSignUp(false)} />
+            <SignupForm onSwitchToLogin={() => setIsSignUp(false)} />
           ) : (
-            <LoginForm onToggleMode={() => setIsSignUp(true)} />
+            <LoginForm onSwitchToSignup={() => setIsSignUp(true)} />
           )}
         </div>
       </div>
