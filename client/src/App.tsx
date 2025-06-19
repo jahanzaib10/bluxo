@@ -9,6 +9,8 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import InviteAcceptance from "./pages/InviteAcceptance";
 import DebugInvitation from "./pages/DebugInvitation";
@@ -25,6 +27,10 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
+              {/* Authentication routes */}
+              <Route path="/auth/login" element={<Login />} />
+              <Route path="/auth/signup" element={<Signup />} />
+              
               <Route path="/" element={<Index />} />
               <Route path="/invite/:token" element={<InviteAcceptance />} />
               <Route path="/debug-invitation" element={<DebugInvitation />} />

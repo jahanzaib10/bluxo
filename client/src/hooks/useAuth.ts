@@ -1,14 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export function useAuth() {
-  const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/auth/me"],
+  const { data: user, isLoading, error } = useQuery({
+    queryKey: ["/api/auth/user"],
+    queryFn: () => apiRequest("GET", "/api/auth/user"),
     retry: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   return {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !error,
+    error,
   };
 }
