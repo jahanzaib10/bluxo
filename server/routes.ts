@@ -1,15 +1,35 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import cookieParser from "cookie-parser";
-import { storage } from "./storage";
-import { authenticateToken, login, signup, logout, getCurrentUser, type AuthRequest } from "./auth";
 import { 
-  insertAccountSchema, 
-  insertCategorySchema, 
-  insertClientSchema, 
-  insertDeveloperSchema, 
-  insertEmployeeSchema 
+  authenticateToken, 
+  requireRole,
+  type AuthRequest, 
+  login, 
+  signup, 
+  logout, 
+  getCurrentUser,
+  inviteUser,
+  acceptInvitation
+} from "./enterprise-auth";
+import { db } from "./db";
+import { 
+  organizations, 
+  users, 
+  userInvitations,
+  categories, 
+  clients, 
+  employees, 
+  developers,
+  income,
+  spending,
+  subscriptions,
+  paymentSources,
+  insertOrganizationSchema,
+  insertUserSchema,
+  insertUserInvitationSchema
 } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {

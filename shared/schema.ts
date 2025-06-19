@@ -58,21 +58,23 @@ export const accounts = pgTable("accounts", {
 
 export const categories = pgTable("categories", {
   id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id),
   name: text("name").notNull(),
   type: text("type").notNull(),
-  parent_id: uuid("parent_id"),
-  created_by: uuid("created_by").notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
+  parentId: uuid("parent_id"),
+  createdBy: uuid("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const clients = pgTable("clients", {
   id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id),
   name: text("name").notNull(),
   email: text("email").notNull(),
   archived: boolean("archived").default(false).notNull(),
-  created_by: uuid("created_by").notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: uuid("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const developers = pgTable("developers", {
@@ -87,15 +89,68 @@ export const developers = pgTable("developers", {
 
 export const employees = pgTable("employees", {
   id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id),
   name: text("name").notNull(),
-  direct_manager_id: uuid("direct_manager_id"),
-  birth_date: date("birth_date"),
-  end_date: date("end_date"),
+  directManagerId: uuid("direct_manager_id"),
+  birthDate: date("birth_date"),
+  endDate: date("end_date"),
   archived: boolean("archived").default(false).notNull(),
   comments: text("comments"),
-  group_name: text("group_name"),
-  created_by: uuid("created_by").notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
+  groupName: text("group_name"),
+  jobTitle: text("job_title"),
+  seniority: text("seniority"),
+  paymentAmount: numeric("payment_amount"),
+  createdBy: uuid("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const income = pgTable("income", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id),
+  amount: numeric("amount").notNull(),
+  description: text("description"),
+  date: date("date").notNull(),
+  categoryId: uuid("category_id").references(() => categories.id),
+  clientId: uuid("client_id").references(() => clients.id),
+  createdBy: uuid("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const spending = pgTable("spending", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id),
+  amount: numeric("amount").notNull(),
+  description: text("description"),
+  date: date("date").notNull(),
+  categoryId: uuid("category_id").references(() => categories.id),
+  paymentSourceId: uuid("payment_source_id"),
+  createdBy: uuid("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id),
+  name: text("name").notNull(),
+  amount: numeric("amount").notNull(),
+  frequency: text("frequency").notNull(),
+  nextPaymentDate: date("next_payment_date"),
+  categoryId: uuid("category_id").references(() => categories.id),
+  paymentSourceId: uuid("payment_source_id"),
+  archived: boolean("archived").default(false).notNull(),
+  createdBy: uuid("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const paymentSources = pgTable("payment_sources", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id),
+  name: text("name").notNull(),
+  type: text("type"),
+  details: text("details"),
+  archived: boolean("archived").default(false).notNull(),
+  createdBy: uuid("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Relations
