@@ -119,6 +119,15 @@ Changelog:
   * Imported financial data: 5 income records, 5 subscriptions, 10 spending records
   * Created payment_sources and user_invitations tables
   * Total records migrated: 97 production records across 12 tables
+- June 19, 2025. Rebranded application to "FIN" with modern authentication UI
+  * Changed application name from "Finance Compass" to "FIN"
+  * Created modern gradient logo with F letter and $ symbol
+  * Redesigned login page at /auth/login with glassmorphism styling
+  * Redesigned signup page at /auth/signup with modern form design
+  * Updated root route (/) to redirect based on authentication status
+  * Authenticated users redirect to /dashboard, unauthenticated to /auth/login
+  * Applied gradient backgrounds, rounded corners, and smooth animations
+  * Enhanced form styling with focus states and hover effects
 ```
 
 ## User Preferences

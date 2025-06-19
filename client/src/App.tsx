@@ -31,6 +31,7 @@ const App = () => (
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/signup" element={<Signup />} />
               
+              {/* Root route - redirect based on auth status */}
               <Route path="/" element={<Index />} />
               <Route path="/invite/:token" element={<InviteAcceptance />} />
               <Route path="/debug-invitation" element={<DebugInvitation />} />

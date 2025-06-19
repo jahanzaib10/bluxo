@@ -1,28 +1,40 @@
 
-
-import { LoginForm } from '@/components/auth/LoginForm';
-import { DollarSign } from 'lucide-react';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Index() {
-  return (
-    <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <DollarSign className="h-12 w-12 text-primary" />
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
-          Finance Compass
-        </h2>
-        <p className="mt-2 text-center text-sm text-muted-foreground">
-          Enterprise finance management platform
-        </p>
-      </div>
+  const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-card py-8 px-4 shadow sm:rounded-lg sm:px-10 border">
-          <LoginForm />
+  useEffect(() => {
+    if (!isLoading) {
+      if (isAuthenticated) {
+        navigate('/dashboard');
+      } else {
+        navigate('/auth/login');
+      }
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  // Show loading while determining auth status
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center transform rotate-3 shadow-lg animate-pulse">
+              <span className="text-white font-bold text-2xl transform -rotate-3">F</span>
+            </div>
+            <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center animate-pulse">
+              <span className="text-white font-bold text-xs">$</span>
+            </div>
+          </div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading FIN...</p>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null; // This won't render since useEffect handles navigation
 }
