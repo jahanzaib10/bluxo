@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -26,6 +28,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -40,13 +44,16 @@ export function LoginForm() {
     try {
       await apiRequest("POST", "/api/auth/login", data);
       
+      // Invalidate auth query to refetch user data
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
       toast({
         title: "Success",
         description: "Logged in successfully",
       });
       
-      // Refresh the page to update auth state
-      window.location.reload();
+      // Navigate to dashboard
+      navigate("/dashboard");
     } catch (error) {
       toast({
         title: "Error",
