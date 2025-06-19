@@ -278,7 +278,7 @@ export async function getCurrentUser(req: AuthRequest, res: Response) {
     return res.status(401).json({ message: "Authentication required" });
   }
 
-  res.json({ user: req.user });
+  res.json(req.user);
 }
 
 // Invite user endpoint

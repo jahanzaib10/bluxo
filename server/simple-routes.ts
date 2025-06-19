@@ -27,7 +27,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/logout", logout);
 
   // Protected authentication routes
-  app.get("/api/auth/me", authenticateToken, getCurrentUser);
+  app.get("/api/auth/user", authenticateToken, getCurrentUser);
 
   // Basic protected routes for testing
   app.get("/api/categories", authenticateToken, async (req: AuthRequest, res) => {
