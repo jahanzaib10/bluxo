@@ -1,56 +1,113 @@
-import { Link } from "react-router-dom";
 import { LoginForm } from '@/components/auth/LoginForm';
-
-const FinLogo = () => (
-  <div className="flex items-center justify-center">
-    <div className="relative">
-      <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center transform rotate-3 shadow-lg">
-        <span className="text-white font-bold text-2xl transform -rotate-3">F</span>
-      </div>
-      <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
-        <span className="text-white font-bold text-xs">$</span>
-      </div>
-    </div>
-  </div>
-);
+import { Link } from 'react-router-dom';
 
 export default function Login() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <FinLogo />
-        <h2 className="mt-6 text-center text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          FIN
-        </h2>
-        <p className="mt-2 text-center text-lg text-muted-foreground">
-          Enterprise Finance Management
-        </p>
-        <p className="mt-1 text-center text-sm text-muted-foreground">
-          Sign in to your account
-        </p>
+    <div className="min-h-screen flex">
+      {/* Left Panel - Brand Side */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-700 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
+          {/* Logo and Brand */}
+          <div>
+            <div className="flex items-center space-x-3 mb-8">
+              <div className="relative">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <span className="text-white font-bold text-xl">F</span>
+                </div>
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">$</span>
+                </div>
+              </div>
+              <span className="text-2xl font-bold">FIN</span>
+            </div>
+            
+            <div className="max-w-md">
+              <h1 className="text-4xl font-bold mb-4 leading-tight">
+                A home for enterprise finance,
+              </h1>
+              <h2 className="text-3xl font-light mb-6 leading-tight opacity-90">
+                where every transaction comes together
+              </h2>
+            </div>
+          </div>
+
+          {/* 3D Illustration Area */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="relative">
+              {/* Stylized 3D elements representing finance/dashboard */}
+              <div className="w-64 h-80 relative">
+                {/* Main phone/dashboard mockup */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 rounded-3xl backdrop-blur-sm border border-white/20 transform rotate-6 shadow-2xl">
+                  <div className="p-6 h-full flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-8 h-8 bg-white/30 rounded-lg"></div>
+                      <div className="w-6 h-6 bg-white/30 rounded-full"></div>
+                    </div>
+                    <div className="space-y-3 flex-1">
+                      <div className="h-3 bg-white/40 rounded-full w-3/4"></div>
+                      <div className="h-3 bg-white/30 rounded-full w-1/2"></div>
+                      <div className="h-16 bg-white/20 rounded-xl mt-4"></div>
+                      <div className="h-3 bg-white/30 rounded-full w-2/3"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Floating cards */}
+                <div className="absolute -left-8 top-16 w-16 h-12 bg-gradient-to-r from-pink-400 to-red-400 rounded-xl transform -rotate-12 shadow-lg"></div>
+                <div className="absolute -right-6 bottom-20 w-14 h-10 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-lg transform rotate-12 shadow-lg"></div>
+                <div className="absolute left-4 -bottom-4 w-12 h-8 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-lg transform -rotate-6 shadow-lg"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Support info */}
+          <div className="text-sm opacity-75">
+            <p className="mb-1">experiencing issues?</p>
+            <p>get assistance via support@fin.com</p>
+          </div>
+        </div>
+        
+        {/* Background patterns */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/50 via-purple-600/50 to-blue-700/50"></div>
+        <div className="absolute top-0 left-0 w-full h-full opacity-10">
+          <div className="absolute top-20 left-20 w-32 h-32 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-40 h-40 bg-white rounded-full blur-3xl"></div>
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg py-10 px-6 shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50">
-          <LoginForm />
-          
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+      {/* Right Panel - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            {/* Mobile logo */}
+            <div className="lg:hidden flex items-center justify-center space-x-3 mb-6">
+              <div className="relative">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-xl">F</span>
+                </div>
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">$</span>
+                </div>
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white dark:bg-slate-800 px-2 text-slate-500">New to FIN?</span>
-              </div>
+              <span className="text-2xl font-bold text-gray-900">FIN</span>
             </div>
-            <div className="mt-6 text-center">
+            
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">login</h1>
+            <p className="text-gray-600">we'll get you back to the app in just a minute.</p>
+          </div>
+
+          <LoginForm />
+
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
               <Link 
                 to="/auth/signup" 
-                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
               >
-                Create Account
+                Sign up
               </Link>
-            </div>
+            </p>
           </div>
         </div>
       </div>

@@ -128,6 +128,13 @@ Changelog:
   * Authenticated users redirect to /dashboard, unauthenticated to /auth/login
   * Applied gradient backgrounds, rounded corners, and smooth animations
   * Enhanced form styling with focus states and hover effects
+- June 19, 2025. Complete authentication UI redesign with split-screen layout
+  * Implemented beautiful split-screen design inspired by modern SaaS applications
+  * Left panel features purple gradient background with 3D illustration mockups
+  * Right panel contains clean, minimal forms with consistent styling
+  * Updated form controls with proper spacing, typography, and indigo color scheme
+  * Added mobile-responsive design with logo fallbacks for smaller screens
+  * Enhanced user experience with professional authentication flow
 ```
 
 ## User Preferences
