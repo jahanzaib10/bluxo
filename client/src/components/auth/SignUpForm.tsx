@@ -7,21 +7,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 
-interface LoginFormProps {
+interface SignUpFormProps {
   onToggleMode: () => void;
 }
 
-export function LoginForm({ onToggleMode }: LoginFormProps) {
+export function SignUpForm({ onToggleMode }: SignUpFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { signup } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim()) {
+    
+    if (!username.trim() || !password.trim() || !confirmPassword.trim()) {
       setError('Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
       return;
     }
 
@@ -29,9 +41,9 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     setError('');
 
     try {
-      await login(username.trim(), password);
+      await signup(username.trim(), password);
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setError(err.message || 'Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -40,9 +52,9 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   return (
     <Card className="w-[400px]">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
+        <CardTitle className="text-2xl text-center">Create account</CardTitle>
         <CardDescription className="text-center">
-          Enter your credentials to access your account
+          Enter your details to create a new account
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -52,7 +64,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
             <Input
               id="username"
               type="text"
-              placeholder="Enter your username"
+              placeholder="Choose a username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={isLoading}
@@ -64,9 +76,21 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
             <Input
               id="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder="Choose a password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="Confirm your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={isLoading}
               required
             />
@@ -82,22 +106,22 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
+                Creating account...
               </>
             ) : (
-              'Sign In'
+              'Sign Up'
             )}
           </Button>
         </form>
 
         <div className="mt-4 text-center text-sm">
-          Don't have an account?{' '}
+          Already have an account?{' '}
           <button
             type="button"
             onClick={onToggleMode}
             className="text-primary hover:underline font-medium"
           >
-            Sign up
+            Sign in
           </button>
         </div>
       </CardContent>
