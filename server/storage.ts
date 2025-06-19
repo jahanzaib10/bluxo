@@ -176,12 +176,12 @@ export class DatabaseStorage implements IStorage {
 
   // Category methods with organization filtering
   async getCategories(orgId: string): Promise<Category[]> {
-    return await db.select().from(categories).where(eq(categories.createdBy, orgId));
+    return await db.select().from(categories).where(eq(categories.created_by, orgId));
   }
 
   async getCategory(id: string, orgId: string): Promise<Category | undefined> {
     const [category] = await db.select().from(categories).where(
-      and(eq(categories.id, id), eq(categories.createdBy, orgId))
+      and(eq(categories.id, id), eq(categories.created_by, orgId))
     );
     return category;
   }
@@ -195,7 +195,7 @@ export class DatabaseStorage implements IStorage {
     const [updatedCategory] = await db
       .update(categories)
       .set(category)
-      .where(and(eq(categories.id, id), eq(categories.createdBy, orgId)))
+      .where(and(eq(categories.id, id), eq(categories.created_by, orgId)))
       .returning();
     return updatedCategory;
   }
@@ -203,7 +203,7 @@ export class DatabaseStorage implements IStorage {
   async deleteCategory(id: string, orgId: string): Promise<boolean> {
     const result = await db
       .delete(categories)
-      .where(and(eq(categories.id, id), eq(categories.createdBy, orgId)));
+      .where(and(eq(categories.id, id), eq(categories.created_by, orgId)));
     return result.rowCount > 0;
   }
 
