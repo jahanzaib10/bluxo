@@ -1,14 +1,14 @@
-import { useEffect } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children: ReactNode;
   requiredRoles?: string[];
 }
 
-export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
-  const { user, isLoading, isAuthenticated } = useAuth();
+export function ProtectedRoute({ children, requiredRoles = [] }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, user, hasRole } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -21,26 +21,22 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
       setTimeout(() => {
         window.location.href = "/auth/login";
       }, 500);
-      return;
     }
+  }, [isAuthenticated, isLoading, toast]);
 
-    if (!isLoading && isAuthenticated && requiredRoles && user) {
-      const hasRequiredRole = requiredRoles.includes(user.role);
-      if (!hasRequiredRole) {
-        toast({
-          title: "Access Denied",
-          description: "You don't have permission to access this page.",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 500);
-        return;
-      }
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && requiredRoles.length > 0 && !hasRole(requiredRoles)) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access this page.",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
     }
-  }, [isLoading, isAuthenticated, user, requiredRoles, toast]);
+  }, [isAuthenticated, isLoading, user, requiredRoles, hasRole, toast]);
 
-  // Show loading while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -49,14 +45,12 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     );
   }
 
-  // Don't render children if not authenticated
   if (!isAuthenticated) {
-    return null;
+    return null; // Will redirect to login
   }
 
-  // Don't render children if role check fails
-  if (requiredRoles && user && !requiredRoles.includes(user.role)) {
-    return null;
+  if (requiredRoles.length > 0 && !hasRole(requiredRoles)) {
+    return null; // Will redirect to dashboard
   }
 
   return <>{children}</>;
