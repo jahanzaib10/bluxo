@@ -153,32 +153,32 @@ export const paymentSources = pgTable("payment_sources", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Relations
-export const categoriesRelations = relations(categories, ({ one, many }) => ({
-  parent: one(categories, {
-    fields: [categories.parent_id],
-    references: [categories.id],
-  }),
-  children: many(categories),
-}));
+// Relations - temporarily disabled to fix startup issues
+// export const categoriesRelations = relations(categories, ({ one, many }) => ({
+//   parent: one(categories, {
+//     fields: [categories.parentId],
+//     references: [categories.id],
+//   }),
+//   children: many(categories),
+// }));
 
-export const developersRelations = relations(developers, ({ one }) => ({
-  client: one(clients, {
-    fields: [developers.client_id],
-    references: [clients.id],
-  }),
-}));
+// export const developersRelations = relations(developers, ({ one }) => ({
+//   client: one(clients, {
+//     fields: [developers.client_id],
+//     references: [clients.id],
+//   }),
+// }));
 
-export const clientsRelations = relations(clients, ({ many }) => ({
-  developers: many(developers),
-}));
+// export const clientsRelations = relations(clients, ({ many }) => ({
+//   developers: many(developers),
+// }));
 
-export const employeesRelations = relations(employees, ({ one }) => ({
-  manager: one(employees, {
-    fields: [employees.direct_manager_id],
-    references: [employees.id],
-  }),
-}));
+// export const employeesRelations = relations(employees, ({ one }) => ({
+//   manager: one(employees, {
+//     fields: [employees.directManagerId],
+//     references: [employees.id],
+//   }),
+// }));
 
 // Insert schemas
 export const insertAccountSchema = createInsertSchema(accounts).omit({
