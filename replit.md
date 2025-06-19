@@ -105,6 +105,13 @@ The application manages five main entities:
 ```
 Changelog:
 - June 19, 2025. Initial setup
+- June 19, 2025. Complete migration from Supabase to JWT authentication
+  * Implemented Express JWT authentication with bcryptjs password hashing
+  * Created JWT middleware for protecting API routes
+  * Built new login/signup forms using React Hook Form
+  * Added HTTP-only cookie support with localStorage backup
+  * Protected all API endpoints with JWT authentication middleware
+  * Replaced Supabase AuthProvider with custom JWT authentication context
 ```
 
 ## User Preferences

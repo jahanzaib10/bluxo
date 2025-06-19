@@ -7,17 +7,17 @@ import { DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 function AuthenticatedApp() {
-  const { user, loading } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!isLoading && isAuthenticated) {
       console.log('User authenticated, redirecting to dashboard');
       navigate('/overview');
     }
-  }, [user, loading, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -25,7 +25,7 @@ function AuthenticatedApp() {
     );
   }
 
-  if (user) {
+  if (isAuthenticated) {
     return null; // Will redirect via useEffect
   }
 
