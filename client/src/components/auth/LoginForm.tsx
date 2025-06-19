@@ -1,105 +1,108 @@
-import { useState } from 'react';
-import { useAuth } from '@/components/auth/AuthProvider';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
-interface LoginFormProps {
-  onToggleMode: () => void;
-}
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
-export function LoginForm({ onToggleMode }: LoginFormProps) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+type LoginFormData = z.infer<typeof loginSchema>;
+
+export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username.trim() || !password.trim()) {
-      setError('Please fill in all fields');
-      return;
-    }
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-    setError('');
-
     try {
-      await login(username.trim(), password);
-    } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      await apiRequest("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      
+      toast({
+        title: "Success",
+        description: "Logged in successfully",
+      });
+      
+      // Refresh the page to update auth state
+      window.location.reload();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to log in",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Card className="w-[400px]">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
-        <CardDescription className="text-center">
-          Enter your credentials to access your account
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle>Sign In</CardTitle>
+        <CardDescription>
+          Enter your email and password to access your account
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              disabled={isLoading}
-              required
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="Enter your email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-              required
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Enter your password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </Button>
-        </form>
-
-        <div className="mt-4 text-center text-sm">
-          Don't have an account?{' '}
-          <button
-            type="button"
-            onClick={onToggleMode}
-            className="text-primary hover:underline font-medium"
-          >
-            Sign up
-          </button>
-        </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );
