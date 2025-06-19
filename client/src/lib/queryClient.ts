@@ -40,27 +40,13 @@ export async function apiRequest(
   return res.json();
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => (context: { queryKey: readonly [string, ...unknown[]] }) => Promise<T | null> =
-  ({ on401 }) =>
-  async ({ queryKey }) => {
-    const [url] = queryKey;
-    try {
-      return await apiRequest("GET", url);
-    } catch (error: any) {
-      if (error?.message?.includes("401") && on401 === "returnNull") {
-        return null;
-      }
-      throw error;
-    }
-  };
-
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: async ({ queryKey }) => {
+        const [url] = queryKey as [string, ...unknown[]];
+        return await apiRequest("GET", url);
+      },
       staleTime: 1000 * 60 * 5, // 5 minutes
       retry: (failureCount, error: any) => {
         if (error?.message?.includes("401") || error?.message?.includes("403")) {
