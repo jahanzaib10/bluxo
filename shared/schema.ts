@@ -94,6 +94,15 @@ export const income = pgTable("income", {
   categoryId: uuid("category_id").references(() => categories.id),
   description: text("description"),
   isRecurring: boolean("is_recurring").default(false),
+  recurringFrequency: varchar("recurring_frequency", { 
+    enum: ['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly'] 
+  }),
+  recurringEndDate: date("recurring_end_date"),
+  status: varchar("status", { 
+    enum: ['pending', 'paid', 'failed'] 
+  }).default('paid'),
+  invoiceId: varchar("invoice_id"),
+  currency: varchar("currency", { length: 3 }).default('USD'),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -242,6 +251,11 @@ export const insertIncomeSchema = z.object({
   categoryId: z.string().uuid().optional(),
   description: z.string().optional(),
   isRecurring: z.boolean().optional(),
+  recurringFrequency: z.enum(['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly']).optional(),
+  recurringEndDate: z.string().optional(),
+  status: z.enum(['pending', 'paid', 'failed']).optional(),
+  invoiceId: z.string().optional(),
+  currency: z.string().length(3).optional(),
 });
 
 export const insertExpenseSchema = z.object({

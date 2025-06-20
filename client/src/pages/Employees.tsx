@@ -356,17 +356,17 @@ export default function Employees() {
                         <TableBody>
                           {csvPreview.slice(0, 5).map((row, index) => (
                             <TableRow key={index}>
-                              <TableCell>{row.name || "—"}</TableCell>
-                              <TableCell>{row.email || "—"}</TableCell>
-                              <TableCell>{row.position || "—"}</TableCell>
-                              <TableCell>{row.groupName || "—"}</TableCell>
-                              <TableCell>{row.seniorityLevel || "—"}</TableCell>
-                              <TableCell>{row.paymentAmount || "—"}</TableCell>
-                              <TableCell>{row.startDate || "—"}</TableCell>
-                              <TableCell>{row.endDate || "—"}</TableCell>
-                              <TableCell>{row.birthDate || "—"}</TableCell>
-                              <TableCell>{row.directManagerId || "—"}</TableCell>
-                              <TableCell>{row.status || "active"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.name || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.email || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.position || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.groupName || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.seniorityLevel || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.paymentAmount || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.startDate || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.endDate || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.birthDate || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.directManagerId || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.status || "active"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -579,16 +579,16 @@ export default function Employees() {
                 <TableBody>
                   {filteredEmployees.map((employee: Employee) => (
                     <TableRow key={employee.id}>
-                      <TableCell className="font-medium">{employee.name}</TableCell>
-                      <TableCell>{employee.email || "—"}</TableCell>
-                      <TableCell>{employee.position || "—"}</TableCell>
-                      <TableCell>{employee.groupName || "—"}</TableCell>
-                      <TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">{employee.name}</TableCell>
+                      <TableCell className="whitespace-nowrap">{employee.email || "—"}</TableCell>
+                      <TableCell className="whitespace-nowrap">{employee.position || "—"}</TableCell>
+                      <TableCell className="whitespace-nowrap">{employee.groupName || "—"}</TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {employee.seniorityLevel ? (
                           <Badge variant="outline">{employee.seniorityLevel}</Badge>
                         ) : "—"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {employee.paymentAmount ? 
                           new Intl.NumberFormat('en-US', { 
                             style: 'currency', 
@@ -598,16 +598,16 @@ export default function Employees() {
                           : "—"
                         }
                       </TableCell>
-                      <TableCell>{employee.startDate ? new Date(employee.startDate).toLocaleDateString() : "—"}</TableCell>
-                      <TableCell>{employee.endDate ? new Date(employee.endDate).toLocaleDateString() : "—"}</TableCell>
-                      <TableCell>{employee.birthDate ? new Date(employee.birthDate).toLocaleDateString() : "—"}</TableCell>
-                      <TableCell>{employee.directManagerId ? employeeMap[employee.directManagerId] || "—" : "—"}</TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">{employee.startDate ? new Date(employee.startDate).toLocaleDateString() : "—"}</TableCell>
+                      <TableCell className="whitespace-nowrap">{employee.endDate ? new Date(employee.endDate).toLocaleDateString() : "—"}</TableCell>
+                      <TableCell className="whitespace-nowrap">{employee.birthDate ? new Date(employee.birthDate).toLocaleDateString() : "—"}</TableCell>
+                      <TableCell className="whitespace-nowrap">{employee.directManagerId ? employeeMap[employee.directManagerId] || "—" : "—"}</TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <Badge variant={employee.status === 'active' ? 'default' : employee.status === 'inactive' ? 'secondary' : 'destructive'}>
                           {employee.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"
