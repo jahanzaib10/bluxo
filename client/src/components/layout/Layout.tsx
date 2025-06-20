@@ -21,6 +21,7 @@ import {
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import ProfileDropdown from '@/components/ProfileDropdown';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -47,12 +48,19 @@ export function Layout({ children }: LayoutProps) {
     return location === path || (path !== '/dashboard' && location.startsWith(path));
   };
 
-  const handleLogout = () => {
-    // Clear localStorage and cookies
-    localStorage.removeItem('authToken');
-    document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    // Reload to trigger redirect to login
-    window.location.reload();
+  const handleLogout = async () => {
+    try {
+      // Clear authentication data
+      document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+      localStorage.removeItem('auth_token');
+      
+      // Force redirect to login
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force redirect even if there's an error
+      window.location.href = '/login';
+    }
   };
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
@@ -243,11 +251,8 @@ export function Layout({ children }: LayoutProps) {
               )}
             </Button>
             
-            {/* Logout Button */}
-            <Button variant="ghost" size="sm">
-              <LogOut className="h-4 w-4" />
-              <span className="ml-2 hidden sm:inline">Logout</span>
-            </Button>
+            {/* Profile Dropdown */}
+            <ProfileDropdown />
           </div>
         </header>
 
