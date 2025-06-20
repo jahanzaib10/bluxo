@@ -168,6 +168,15 @@ Changelog:
   * Implemented proper handling of empty optional fields as null values
   * Updated frontend to display recurring status as "Yes"/"No" for better readability
   * Applied consistent Card-based UI layout across Income, Expenses, and Employees pages
+- June 20, 2025. Completed comprehensive subscriptions management system
+  * Built full CRUD operations for both internal and client-billed recurring expenses
+  * Enhanced subscriptions schema with type differentiation, client assignments, and billing cycles
+  * Added comprehensive API endpoints with data enrichment (client, employee, category names)
+  * Created modern subscription management UI with stats cards, filtering, and form validation
+  * Implemented subscription types: "internal" for company expenses, "client" for billable services
+  * Added billing cycle options: monthly, quarterly, bi-annual, yearly with visual badges
+  * Integrated client assignment for client-billed subscriptions with revenue tracking
+  * Built reconciliation status tracking and comprehensive subscription analytics
 ```
 
 ## User Preferences
