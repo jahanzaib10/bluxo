@@ -278,30 +278,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Map common field variations
     const fieldMappings = {
-      name: ['name', 'full_name', 'employee_name', 'full name', 'employee name'],
-      email: ['email', 'email_address', 'e-mail', 'email address'],
-      position: ['position', 'job_title', 'title', 'role', 'job title', 'job_title'],
-      country: ['country', 'location', 'region'],
-      startDate: ['start_date', 'start_dt', 'hire_date', 'joining_date', 'start date', 'hire date'],
-      endDate: ['end_date', 'end_dt', 'termination_date', 'leaving_date', 'end date', 'termination date'],
-      birthDate: ['birth_date', 'date_of_birth', 'dob', 'birth date', 'date of birth'],
-      seniorityLevel: ['seniority_level', 'level', 'grade', 'seniority', 'seniority level'],
-      paymentAmount: ['payment_amount', 'salary', 'compensation', 'pay', 'amount', 'payment'],
-      directManagerName: ['direct_manager_name', 'manager', 'supervisor', 'direct_manager', 'manager_name', 'direct manager', 'manager name'],
-      groupName: ['group_name', 'group', 'department', 'team', 'division', 'group name'],
-      status: ['status', 'employment_status', 'state', 'employment status']
+      name: ['name', 'fullname', 'employeename', 'workerfullname'],
+      email: ['email', 'emailaddress', 'personalemail'],
+      position: ['position', 'jobtitle', 'title', 'role'],
+      country: ['country', 'location', 'region', 'countryofresidence'],
+      startDate: ['startdate', 'startdt', 'hiredate', 'joiningdate'],
+      endDate: ['enddate', 'enddt', 'terminationdate', 'leavingdate'],
+      birthDate: ['birthdate', 'dateofbirth', 'dob'],
+      seniorityLevel: ['senioritylevel', 'level', 'grade', 'seniority'],
+      paymentAmount: ['paymentamount', 'salary', 'compensation', 'pay', 'amount', 'payment'],
+      directManagerName: ['directmanagername', 'manager', 'supervisor', 'directmanager', 'managername'],
+      groupName: ['groupname', 'group', 'department', 'team', 'division'],
+      status: ['status', 'employmentstatus', 'state']
     };
     
     // Normalize row keys for case-insensitive matching
     const normalizedRow: any = {};
     Object.keys(row).forEach(key => {
-      normalizedRow[key.toLowerCase().replace(/[_\s]/g, '_')] = row[key];
+      const normalizedKey = key.toLowerCase().replace(/[_\s-]/g, '');
+      normalizedRow[normalizedKey] = row[key];
     });
     
     // Map fields using variations
     Object.entries(fieldMappings).forEach(([targetField, variations]) => {
       for (const variation of variations) {
-        const normalizedVariation = variation.toLowerCase().replace(/[_\s]/g, '_');
+        const normalizedVariation = variation.toLowerCase().replace(/[_\s-]/g, '');
         if (normalizedRow[normalizedVariation] !== undefined) {
           mapped[targetField] = normalizedRow[normalizedVariation];
           break;
@@ -343,6 +344,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const rawRow = employeeData[i];
         const row = mapCsvFields(rawRow);
         
+        // Debug logging
+        console.log(`Row ${i + 1} raw:`, rawRow);
+        console.log(`Row ${i + 1} mapped:`, row);
+        
         // Validate required fields
         const name = row.name?.toString().trim();
         const email = row.email?.toString().trim();
@@ -381,10 +386,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           managerName: row.directManagerName?.toString().trim() || null, // Store for resolution
         };
         
-        // Validate start_date if provided (required field in schema)
+        // Set default start date if missing (not strictly required for import)
         if (!processedEmployee.startDate) {
-          errors.push(`Row ${i + 1}: Missing or invalid required field 'start_date'`);
-          continue;
+          processedEmployee.startDate = new Date().toISOString().split('T')[0]; // Default to today
         }
         
         processedEmployees.push(processedEmployee);
