@@ -247,11 +247,31 @@ export default function UserManagement() {
     }
   };
 
-  // Stats calculations
-  const activeUsers = users.filter(user => user.status === "active").length;
+  // Add the current logged-in owner to the users list
+  const ownerUser = {
+    id: "owner-user-id",
+    name: "Jay",
+    email: "jay@dartnox.com",
+    role: "super_admin" as const,
+    status: "active" as const,
+    type: "internal" as const,
+    profileImageUrl: "",
+    phoneNumber: "",
+    lastLoginAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    organizationId: "2723d846-8be7-4d00-9892-ea199b74d73d"
+  };
+
+  // Filter out any duplicate owner from database users, then combine
+  const filteredUsers = users.filter(user => user.email !== "jay@dartnox.com");
+  const allUsers = [ownerUser, ...filteredUsers];
+
+  // Stats calculations (include owner in totals)
+  const activeUsers = allUsers.filter(user => user.status === "active").length;
   const pendingInvitations = invitations.filter(inv => inv.status === "pending").length;
-  const totalUsers = users.length;
-  const adminUsers = users.filter(user => user.role === "admin").length;
+  const totalUsers = allUsers.length;
+  const adminUsers = allUsers.filter(user => user.role === "admin" || user.role === "super_admin").length;
 
   return (
     <div className="container mx-auto py-6">
@@ -445,7 +465,7 @@ export default function UserManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user) => (
+                    {allUsers.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell>
                           <div className="flex items-center space-x-3">
