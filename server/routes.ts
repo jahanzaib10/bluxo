@@ -9,7 +9,7 @@ import {
   expenses, 
   subscriptions
 } from "@shared/schema";
-import { eq, sum, desc } from "drizzle-orm";
+import { eq, sum, desc, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 // Mock auth middleware for now
@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/employees", mockAuth, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId;
-      const { name, email, position } = req.body;
+      const { name, email, position, country, startDate, endDate, status } = req.body;
       
       if (!name) {
         return res.status(400).json({ message: "Name is required" });
@@ -127,6 +127,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name,
           email: email || null,
           position: position || null,
+          country: country || null,
+          startDate: startDate || null,
+          endDate: endDate || null,
+          status: status || 'active',
           organizationId,
         })
         .returning();
@@ -135,6 +139,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating employee:", error);
       res.status(500).json({ message: "Failed to create employee" });
+    }
+  });
+
+  app.put("/api/employees/:id", mockAuth, async (req: any, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      const { id } = req.params;
+      const { name, email, position, country, startDate, endDate, status } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      
+      const [updatedEmployee] = await db
+        .update(employees)
+        .set({
+          name,
+          email: email || null,
+          position: position || null,
+          country: country || null,
+          startDate: startDate || null,
+          endDate: endDate || null,
+          status: status || 'active',
+        })
+        .where(and(eq(employees.id, id), eq(employees.organizationId, organizationId)))
+        .returning();
+      
+      if (!updatedEmployee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      res.json(updatedEmployee);
+    } catch (error) {
+      console.error("Error updating employee:", error);
+      res.status(500).json({ message: "Failed to update employee" });
+    }
+  });
+
+  app.delete("/api/employees/:id", mockAuth, async (req: any, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      const { id } = req.params;
+      
+      const [deletedEmployee] = await db
+        .delete(employees)
+        .where(and(eq(employees.id, id), eq(employees.organizationId, organizationId)))
+        .returning();
+      
+      if (!deletedEmployee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      res.json({ message: "Employee deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting employee:", error);
+      res.status(500).json({ message: "Failed to delete employee" });
+    }
+  });
+
+  app.post("/api/employees/import", mockAuth, async (req: any, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      const { employees: employeeData } = req.body;
+      
+      if (!Array.isArray(employeeData) || employeeData.length === 0) {
+        return res.status(400).json({ message: "Invalid employee data" });
+      }
+      
+      // Validate required fields
+      for (const emp of employeeData) {
+        if (!emp.name) {
+          return res.status(400).json({ message: "All employees must have a name" });
+        }
+      }
+      
+      const employeesToInsert = employeeData.map(emp => ({
+        name: emp.name,
+        email: emp.email || null,
+        position: emp.position || null,
+        country: emp.country || null,
+        startDate: emp.startDate || null,
+        endDate: emp.endDate || null,
+        status: emp.status || 'active',
+        organizationId,
+      }));
+      
+      const insertedEmployees = await db
+        .insert(employees)
+        .values(employeesToInsert)
+        .returning();
+      
+      res.status(201).json({
+        message: `Successfully imported ${insertedEmployees.length} employees`,
+        employees: insertedEmployees
+      });
+    } catch (error) {
+      console.error("Error importing employees:", error);
+      res.status(500).json({ message: "Failed to import employees" });
     }
   });
 

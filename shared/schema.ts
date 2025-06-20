@@ -55,6 +55,10 @@ export const employees = pgTable("employees", {
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email"),
   position: varchar("position"),
+  country: varchar("country"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  status: varchar("status").default("active"),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
