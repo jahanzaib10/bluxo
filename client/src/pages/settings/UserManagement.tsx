@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,12 +47,31 @@ export default function UserManagement() {
   const CURRENT_USER_ID = currentUser?.id;
   const CURRENT_USER_EMAIL = currentUser?.email;
 
-  // Fetch users
+  // Clear cache on mount to ensure fresh data
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/user-invitations"] });
+  }, [queryClient]);
+
+  // Fetch users with aggressive cache busting
   const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
-    queryKey: ["/api/users"],
-    staleTime: 0, // Always refetch fresh data
+    queryKey: ["/api/users", Date.now()], // Add timestamp to force fresh requests
+    staleTime: 0,
     refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
+
+  // Add console logging to debug the data received
+  useEffect(() => {
+    console.log("[DEBUG] Users data received:", users);
+    console.log("[DEBUG] Users count:", users.length);
+    console.log("[DEBUG] Current user:", currentUser);
+    if (users && users.length > 0) {
+      users.forEach((user, index) => {
+        console.log(`[DEBUG] User ${index}:`, { id: user.id, email: user.email, name: user.name });
+      });
+    }
+  }, [users, currentUser]);
 
   // Fetch invitations
   const { data: invitations = [], isLoading: invitationsLoading } = useQuery<UserInvitation[]>({
@@ -253,25 +272,8 @@ export default function UserManagement() {
     }
   };
 
-  // Add the current logged-in owner to the users list
-  const ownerUser = {
-    id: "owner-user-id",
-    name: "Jay",
-    email: "jay@dartnox.com",
-    role: "super_admin" as const,
-    status: "active" as const,
-    type: "internal" as const,
-    profileImageUrl: "",
-    phoneNumber: "",
-    lastLoginAt: new Date(),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    organizationId: "2723d846-8be7-4d00-9892-ea199b74d73d"
-  };
-
-  // Filter out any duplicate owner from database users, then combine
-  const filteredUsers = users.filter(user => user.email !== "jay@dartnox.com");
-  const allUsers = [ownerUser, ...filteredUsers];
+  // Use only actual users from API, no hardcoded data
+  const allUsers = users.filter(user => user.role !== "client");
 
   // Stats calculations (include owner in totals)
   const activeUsers = allUsers.filter(user => user.status === "active").length;
