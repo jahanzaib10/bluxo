@@ -605,6 +605,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Categories CSV import endpoint
+  app.post("/api/categories/import", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      const { data: categoryData } = req.body;
+      
+      if (!Array.isArray(categoryData) || categoryData.length === 0) {
+        return res.status(400).json({ 
+          message: "Invalid or empty category data provided" 
+        });
+      }
+      
+      const processedCategories = [];
+      const errors = [];
+      const duplicateNames = new Set();
+      
+      // Get existing categories to check for duplicates
+      const existingCategories = await db
+        .select({ name: categories.name, type: categories.type })
+        .from(categories)
+        .where(eq(categories.organizationId, organizationId));
+      
+      const existingCategoryMap = new Map();
+      existingCategories.forEach(cat => {
+        existingCategoryMap.set(`${cat.name.toLowerCase()}_${cat.type}`, true);
+      });
+      
+      for (let i = 0; i < categoryData.length; i++) {
+        const row = categoryData[i];
+        
+        // Skip empty rows
+        if (!row || (!row.name && !row.type)) {
+          continue;
+        }
+        
+        const name = row.name?.toString().trim();
+        const type = row.type?.toString().toLowerCase().trim();
+        
+        // Validate required fields
+        if (!name) {
+          errors.push(`Row ${i + 1}: Category name is required`);
+          continue;
+        }
+        
+        if (!type || !['income', 'expense'].includes(type)) {
+          errors.push(`Row ${i + 1}: Type must be either 'income' or 'expense'`);
+          continue;
+        }
+        
+        // Check for duplicates within the batch
+        const categoryKey = `${name.toLowerCase()}_${type}`;
+        if (duplicateNames.has(categoryKey)) {
+          errors.push(`Row ${i + 1}: Duplicate category '${name}' with type '${type}' found in import data`);
+          continue;
+        }
+        
+        // Check for existing categories in database
+        if (existingCategoryMap.has(categoryKey)) {
+          errors.push(`Row ${i + 1}: Category '${name}' with type '${type}' already exists`);
+          continue;
+        }
+        
+        duplicateNames.add(categoryKey);
+        
+        processedCategories.push({
+          name,
+          type: type as 'income' | 'expense',
+          organizationId,
+        });
+      }
+      
+      // Insert valid categories
+      let insertedCategories = [];
+      if (processedCategories.length > 0) {
+        insertedCategories = await db
+          .insert(categories)
+          .values(processedCategories)
+          .returning();
+      }
+      
+      res.status(200).json({
+        message: `Successfully imported ${insertedCategories.length} of ${categoryData.length} categories`,
+        imported: insertedCategories.length,
+        total: categoryData.length,
+        errors: errors.length > 0 ? errors : undefined,
+        categories: insertedCategories
+      });
+      
+    } catch (error) {
+      console.error("Error importing categories:", error);
+      res.status(500).json({ 
+        message: "Failed to import categories",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   app.post("/api/categories", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
