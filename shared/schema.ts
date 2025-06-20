@@ -59,6 +59,11 @@ export const employees = pgTable("employees", {
   startDate: date("start_date"),
   endDate: date("end_date"),
   status: varchar("status").default("active"),
+  birthDate: date("birth_date"),
+  seniorityLevel: varchar("seniority_level"),
+  paymentAmount: decimal("payment_amount", { precision: 12, scale: 2 }),
+  directManagerId: uuid("direct_manager_id").references(() => employees.id),
+  groupName: varchar("group_name"),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });

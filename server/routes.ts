@@ -198,45 +198,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced CSV import with data sanitization and validation
+  function sanitizePaymentAmount(value: string): number | null {
+    if (!value || typeof value !== 'string') return null;
+    
+    // Remove currency symbols, commas, percentages, and normalize
+    const cleaned = value
+      .trim()
+      .replace(/[PKR$£€¥₹,\s%]/g, '')
+      .replace(/\.+$/, ''); // Remove trailing dots
+    
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? null : parsed;
+  }
+
+  function parseFlexibleDate(dateStr: string): string | null {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    
+    const trimmed = dateStr.trim();
+    if (!trimmed) return null;
+    
+    // Try different date formats
+    const formats = [
+      /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
+      /^\d{2}\/\d{2}\/\d{4}$/, // MM/DD/YYYY
+      /^\d{2}-\d{2}-\d{4}$/, // MM-DD-YYYY
+    ];
+    
+    try {
+      // Handle MM/DD/YYYY format
+      if (formats[1].test(trimmed)) {
+        const [month, day, year] = trimmed.split('/');
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      
+      // Handle MM-DD-YYYY format
+      if (formats[2].test(trimmed)) {
+        const [month, day, year] = trimmed.split('-');
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      
+      // Handle YYYY-MM-DD format (already correct)
+      if (formats[0].test(trimmed)) {
+        return trimmed;
+      }
+      
+      // Try parsing with Date constructor as fallback
+      const date = new Date(trimmed);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+    } catch (e) {
+      console.warn(`Invalid date format: ${trimmed}`);
+    }
+    
+    return null;
+  }
+
+  function normalizeText(text: string): string {
+    if (!text || typeof text !== 'string') return '';
+    return text.trim().toLowerCase();
+  }
+
+  function mapCsvFields(row: any): any {
+    const mapped: any = {};
+    
+    // Map common field variations
+    const fieldMappings = {
+      name: ['name', 'full_name', 'employee_name', 'full name', 'employee name'],
+      email: ['email', 'email_address', 'e-mail', 'email address'],
+      position: ['position', 'job_title', 'title', 'role', 'job title', 'job_title'],
+      country: ['country', 'location', 'region'],
+      startDate: ['start_date', 'start_dt', 'hire_date', 'joining_date', 'start date', 'hire date'],
+      endDate: ['end_date', 'end_dt', 'termination_date', 'leaving_date', 'end date'],
+      birthDate: ['birth_date', 'date_of_birth', 'dob', 'birth date', 'date of birth'],
+      seniorityLevel: ['seniority_level', 'level', 'grade', 'seniority', 'seniority level'],
+      paymentAmount: ['payment_amount', 'salary', 'compensation', 'pay', 'amount', 'payment'],
+      groupName: ['group_name', 'group', 'department', 'team', 'division', 'group name'],
+      status: ['status', 'employment_status', 'state', 'employment status']
+    };
+    
+    // Normalize row keys for case-insensitive matching
+    const normalizedRow: any = {};
+    Object.keys(row).forEach(key => {
+      normalizedRow[key.toLowerCase().replace(/[_\s]/g, '_')] = row[key];
+    });
+    
+    // Map fields using variations
+    Object.entries(fieldMappings).forEach(([targetField, variations]) => {
+      for (const variation of variations) {
+        const normalizedVariation = variation.toLowerCase().replace(/[_\s]/g, '_');
+        if (normalizedRow[normalizedVariation] !== undefined) {
+          mapped[targetField] = normalizedRow[normalizedVariation];
+          break;
+        }
+      }
+    });
+    
+    return mapped;
+  }
+
   app.post("/api/employees/import", mockAuth, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { employees: employeeData } = req.body;
       
       if (!Array.isArray(employeeData) || employeeData.length === 0) {
-        return res.status(400).json({ message: "Invalid employee data" });
+        return res.status(400).json({ 
+          message: "Invalid employee data",
+          details: "Expected an array of employee records"
+        });
       }
       
-      // Validate required fields
-      for (const emp of employeeData) {
-        if (!emp.name) {
-          return res.status(400).json({ message: "All employees must have a name" });
+      const processedEmployees = [];
+      const errors = [];
+      
+      for (let i = 0; i < employeeData.length; i++) {
+        const rawRow = employeeData[i];
+        const row = mapCsvFields(rawRow);
+        
+        // Validate required fields
+        const name = row.name?.toString().trim();
+        const email = row.email?.toString().trim();
+        const position = row.position?.toString().trim();
+        
+        if (!name) {
+          errors.push(`Row ${i + 1}: Missing required field 'name'`);
+          continue;
         }
+        
+        if (!email) {
+          errors.push(`Row ${i + 1}: Missing required field 'email'`);
+          continue;
+        }
+        
+        if (!position) {
+          errors.push(`Row ${i + 1}: Missing required field 'position'`);
+          continue;
+        }
+        
+        // Process and sanitize data
+        const processedEmployee = {
+          name,
+          email,
+          position,
+          country: row.country?.toString().trim() || null,
+          startDate: parseFlexibleDate(row.startDate?.toString()),
+          endDate: parseFlexibleDate(row.endDate?.toString()),
+          birthDate: parseFlexibleDate(row.birthDate?.toString()),
+          seniorityLevel: row.seniorityLevel?.toString().trim() || null,
+          paymentAmount: sanitizePaymentAmount(row.paymentAmount?.toString()),
+          groupName: row.groupName?.toString().trim() || null,
+          status: normalizeText(row.status?.toString()) || 'active',
+          organizationId,
+        };
+        
+        // Validate start_date if provided (required field in schema)
+        if (!processedEmployee.startDate) {
+          errors.push(`Row ${i + 1}: Missing or invalid required field 'start_date'`);
+          continue;
+        }
+        
+        processedEmployees.push(processedEmployee);
       }
       
-      const employeesToInsert = employeeData.map(emp => ({
-        name: emp.name,
-        email: emp.email || null,
-        position: emp.position || null,
-        country: emp.country || null,
-        startDate: emp.startDate || null,
-        endDate: emp.endDate || null,
-        status: emp.status || 'active',
-        organizationId,
-      }));
+      // Return errors if any critical validation failed
+      if (errors.length > 0 && processedEmployees.length === 0) {
+        return res.status(400).json({
+          message: "Import failed due to validation errors",
+          errors,
+          processed: 0,
+          total: employeeData.length
+        });
+      }
       
-      const insertedEmployees = await db
-        .insert(employees)
-        .values(employeesToInsert)
-        .returning();
+      // Insert valid employees
+      let insertedEmployees = [];
+      if (processedEmployees.length > 0) {
+        insertedEmployees = await db
+          .insert(employees)
+          .values(processedEmployees)
+          .returning();
+      }
       
+      // Return comprehensive response
       res.status(201).json({
-        message: `Successfully imported ${insertedEmployees.length} employees`,
+        message: `Successfully imported ${insertedEmployees.length} of ${employeeData.length} employees`,
+        imported: insertedEmployees.length,
+        total: employeeData.length,
+        errors: errors.length > 0 ? errors : undefined,
         employees: insertedEmployees
       });
+      
     } catch (error) {
       console.error("Error importing employees:", error);
-      res.status(500).json({ message: "Failed to import employees" });
+      res.status(500).json({ 
+        message: "Failed to import employees",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

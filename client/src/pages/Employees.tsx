@@ -20,6 +20,11 @@ interface Employee {
   country: string | null;
   startDate: string | null;
   endDate: string | null;
+  birthDate: string | null;
+  seniorityLevel: string | null;
+  paymentAmount: number | null;
+  directManagerId: string | null;
+  groupName: string | null;
   status: string;
   createdAt: string;
 }
@@ -41,6 +46,10 @@ export default function Employees() {
     country: "",
     startDate: "",
     endDate: "",
+    birthDate: "",
+    seniorityLevel: "",
+    paymentAmount: "",
+    groupName: "",
     status: "active",
   });
   
