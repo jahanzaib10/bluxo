@@ -166,6 +166,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteClient(id: string): Promise<boolean> {
+    // First delete related permissions
+    await db.delete(clientPermissions).where(eq(clientPermissions.clientId, id));
+    
+    // Then delete related auth tokens
+    await db.delete(clientAuthTokens).where(eq(clientAuthTokens.clientId, id));
+    
+    // Finally delete the client
     const result = await db.delete(clients).where(eq(clients.id, id));
     return result.rowCount! > 0;
   }
