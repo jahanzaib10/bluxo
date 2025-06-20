@@ -40,6 +40,10 @@ export default function UserManagement() {
   const [selectedTab, setSelectedTab] = useState("users");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Current logged-in user ID (from mock auth)
+  const CURRENT_USER_ID = "owner-user-id";
+  const CURRENT_USER_EMAIL = "jay@dartnox.com";
 
   // Fetch users
   const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
@@ -214,10 +218,12 @@ export default function UserManagement() {
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
+      case "super_admin": return "default";
       case "admin": return "destructive";
       case "manager": return "default";
       case "editor": return "secondary";
       case "viewer": return "outline";
+      case "client": return "secondary";
       default: return "outline";
     }
   };
@@ -451,6 +457,9 @@ export default function UserManagement() {
                             <div>
                               <div className="text-sm font-medium">
                                 {user.name || user.email}
+                                {user.id === CURRENT_USER_ID && (
+                                  <span className="ml-2 text-xs text-muted-foreground">(You)</span>
+                                )}
                               </div>
                               <div className="text-sm text-muted-foreground">{user.email}</div>
                             </div>
@@ -478,46 +487,52 @@ export default function UserManagement() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateUserRole(user.id, user.role === "admin" ? "viewer" : "admin")}
-                              >
-                                <Shield className="mr-2 h-4 w-4" />
-                                {user.role === "admin" ? "Remove Admin" : "Make Admin"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateUserStatus(user.id, user.status === "active" ? "inactive" : "active")}
-                              >
-                                {user.status === "active" ? (
-                                  <>
-                                    <UserX className="mr-2 h-4 w-4" />
-                                    Deactivate
-                                  </>
-                                ) : (
-                                  <>
-                                    <UserCheck className="mr-2 h-4 w-4" />
-                                    Activate
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteUser(user.id)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Remove User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {user.id === CURRENT_USER_ID ? (
+                            <div className="text-sm text-muted-foreground px-3 py-2">
+                              Owner (Cannot edit self)
+                            </div>
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateUserRole(user.id, user.role === "admin" ? "viewer" : "admin")}
+                                >
+                                  <Shield className="mr-2 h-4 w-4" />
+                                  {user.role === "admin" ? "Remove Admin" : "Make Admin"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateUserStatus(user.id, user.status === "active" ? "inactive" : "active")}
+                                >
+                                  {user.status === "active" ? (
+                                    <>
+                                      <UserX className="mr-2 h-4 w-4" />
+                                      Deactivate
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserCheck className="mr-2 h-4 w-4" />
+                                      Activate
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Remove User
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
