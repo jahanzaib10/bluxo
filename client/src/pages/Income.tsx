@@ -511,57 +511,110 @@ export default function Income() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center">
+                <TableCell colSpan={10} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredIncome.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center">
+                <TableCell colSpan={10} className="text-center">
                   No income records found
                 </TableCell>
               </TableRow>
             ) : (
-              filteredIncome.map((record: IncomeRecord) => (
-                <TableRow key={record.id}>
-                  <TableCell className="font-medium">
-                    ${parseFloat(record.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{record.clientName || 'N/A'}</TableCell>
-                  <TableCell>{record.paymentSourceName || 'N/A'}</TableCell>
-                  <TableCell>{record.categoryName || 'N/A'}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">
-                    {record.description || 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    {record.isRecurring && (
-                      <UIBadge variant="secondary">
-                        <Badge className="h-3 w-3 mr-1" />
-                        Recurring
+              filteredIncome.map((record: IncomeRecord) => {
+                // Calculate next due date for recurring income
+                const calculateNextDueDate = (date: string, frequency: string) => {
+                  if (!frequency) return null;
+                  const baseDate = new Date(date);
+                  const now = new Date();
+                  
+                  while (baseDate <= now) {
+                    switch (frequency) {
+                      case 'weekly':
+                        baseDate.setDate(baseDate.getDate() + 7);
+                        break;
+                      case 'monthly':
+                        baseDate.setMonth(baseDate.getMonth() + 1);
+                        break;
+                      case 'quarterly':
+                        baseDate.setMonth(baseDate.getMonth() + 3);
+                        break;
+                      case 'bi-annual':
+                        baseDate.setMonth(baseDate.getMonth() + 6);
+                        break;
+                      case 'yearly':
+                        baseDate.setFullYear(baseDate.getFullYear() + 1);
+                        break;
+                      default:
+                        return null;
+                    }
+                  }
+                  
+                  // Check if past end date
+                  if (record.recurringEndDate && baseDate > new Date(record.recurringEndDate)) {
+                    return null;
+                  }
+                  
+                  return baseDate;
+                };
+
+                const nextDueDate = record.isRecurring ? calculateNextDueDate(record.date, record.recurringFrequency || '') : null;
+                const isRecurringActive = nextDueDate && (!record.recurringEndDate || new Date(record.recurringEndDate) > new Date());
+
+                return (
+                  <TableRow key={record.id} className={!isRecurringActive && record.isRecurring ? 'opacity-60' : ''}>
+                    <TableCell className="font-medium whitespace-nowrap">
+                      {record.currency && record.currency !== 'USD' ? record.currency + ' ' : '$'}
+                      {parseFloat(record.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{new Date(record.date).toLocaleDateString()}</TableCell>
+                    <TableCell className="whitespace-nowrap">{record.clientName || 'N/A'}</TableCell>
+                    <TableCell className="whitespace-nowrap">{record.categoryName || 'N/A'}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <UIBadge variant={
+                        record.status === 'paid' ? 'default' : 
+                        record.status === 'pending' ? 'secondary' : 
+                        'destructive'
+                      }>
+                        {record.status || 'paid'}
                       </UIBadge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(record)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(record.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{record.invoiceId || '—'}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {record.isRecurring ? (
+                        <UIBadge variant={isRecurringActive ? "default" : "outline"}>
+                          {record.recurringFrequency || 'recurring'}
+                        </UIBadge>
+                      ) : '—'}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {nextDueDate ? nextDueDate.toLocaleDateString() : '—'}
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate">
+                      {record.description || '—'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(record)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(record.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>

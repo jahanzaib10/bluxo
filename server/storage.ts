@@ -1,21 +1,15 @@
 import { 
-  accounts, 
   categories, 
   clients, 
-  developers, 
   employees,
   paymentSources,
   income,
   expenses,
   users,
-  type Account, 
-  type InsertAccount,
   type Category, 
   type InsertCategory,
   type Client, 
   type InsertClient,
-  type Developer, 
-  type InsertDeveloper,
   type Employee, 
   type InsertEmployee,
   type PaymentSource,
@@ -25,7 +19,7 @@ import {
   type Expense,
   type InsertExpense,
   type User, 
-  type InsertUser 
+  type UpsertUser 
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, isNull } from "drizzle-orm";
@@ -35,13 +29,6 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-
-  // Account methods
-  getAccounts(): Promise<Account[]>;
-  getAccount(id: string): Promise<Account | undefined>;
-  createAccount(account: InsertAccount): Promise<Account>;
-  updateAccount(id: string, account: Partial<InsertAccount>): Promise<Account | undefined>;
-  deleteAccount(id: string): Promise<boolean>;
 
   // Category methods
   getCategories(): Promise<Category[]>;

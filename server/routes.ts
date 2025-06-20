@@ -7,8 +7,13 @@ import {
   categories, 
   income, 
   expenses, 
-  subscriptions
+  subscriptions,
+  paymentSources,
+  insertIncomeSchema,
+  insertExpenseSchema,
+  insertPaymentSourceSchema
 } from "@shared/schema";
+import { storage } from "./storage";
 import { eq, sum, desc, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
