@@ -127,6 +127,22 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Organization operations
+  async createOrganization(organizationData: InsertOrganization): Promise<Organization> {
+    const [organization] = await db
+      .insert(organizations)
+      .values({
+        name: organizationData.name
+      })
+      .returning();
+    return organization;
+  }
+
+  async getOrganization(id: string): Promise<Organization | undefined> {
+    const [organization] = await db.select().from(organizations).where(eq(organizations.id, id));
+    return organization;
+  }
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -147,6 +163,14 @@ export class DatabaseStorage implements IStorage {
     await db.update(users)
       .set({ lastLoginAt: new Date() })
       .where(eq(users.id, id));
+  }
+
+  async updateUserOrganization(id: string, organizationId: string): Promise<User | undefined> {
+    const [user] = await db.update(users)
+      .set({ organizationId })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
   }
 
   async createUser(insertUser: UpsertUser): Promise<User> {

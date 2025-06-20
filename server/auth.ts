@@ -253,7 +253,12 @@ export async function signup(req: Request, res: Response) {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create user with email as primary identifier
+    // Create organization for new account owner
+    const organization = await storage.createOrganization({
+      name: `${email.split('@')[0]}'s Organization`
+    });
+
+    // Create user with organization association
     const user = await storage.createUser({
       id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       email,
@@ -262,7 +267,7 @@ export async function signup(req: Request, res: Response) {
       role: 'admin', // First user becomes admin
       type: 'internal',
       status: 'active',
-      organizationId: null // Will be set when organization is created
+      organizationId: organization.id
     });
 
     // Generate token
