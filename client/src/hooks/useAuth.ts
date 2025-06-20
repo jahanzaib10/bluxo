@@ -6,13 +6,13 @@ export function useAuth() {
     queryKey: ["/api/auth/user"],
     queryFn: () => apiRequest("GET", "/api/auth/user"),
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   return {
     user,
     isLoading,
     isAuthenticated: !!user && !error,
-    error,
+    error
   };
 }

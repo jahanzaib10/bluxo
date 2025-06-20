@@ -122,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Employees endpoints
-  app.get("/api/employees", mockAuth, async (req: any, res) => {
+  app.get("/api/employees", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const result = await db
@@ -138,7 +138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/employees", mockAuth, async (req: any, res) => {
+  app.post("/api/employees", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { name, email, position, country, startDate, endDate, status } = req.body;
@@ -168,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/employees/:id", mockAuth, async (req: any, res) => {
+  app.put("/api/employees/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { id } = req.params;
@@ -203,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/employees/:id", mockAuth, async (req: any, res) => {
+  app.delete("/api/employees/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { id } = req.params;
@@ -339,7 +339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return mapped;
   }
 
-  app.post("/api/employees/import", mockAuth, async (req: any, res) => {
+  app.post("/api/employees/import", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { employees: employeeData } = req.body;
@@ -503,7 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client CSV Import endpoint
-  app.post("/api/clients/import", mockAuth, async (req: any, res) => {
+  app.post("/api/clients/import", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { clients: clientData } = req.body;
@@ -589,7 +589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Categories endpoints
-  app.get("/api/categories", mockAuth, async (req: any, res) => {
+  app.get("/api/categories", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const result = await db
@@ -605,7 +605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/categories", mockAuth, async (req: any, res) => {
+  app.post("/api/categories", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { name, type } = req.body;
@@ -631,7 +631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Income endpoints
-  app.get("/api/income", mockAuth, async (req: any, res) => {
+  app.get("/api/income", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const result = await db
@@ -647,7 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/income", mockAuth, async (req: any, res) => {
+  app.post("/api/income", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { amount, description, date, clientId, categoryId } = req.body;
@@ -676,7 +676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Expenses endpoints
-  app.get("/api/expenses", mockAuth, async (req: any, res) => {
+  app.get("/api/expenses", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const result = await db
@@ -692,7 +692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/expenses", mockAuth, async (req: any, res) => {
+  app.post("/api/expenses", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { amount, description, date, employeeId, categoryId } = req.body;
@@ -721,7 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Subscriptions endpoints
-  app.get("/api/subscriptions", mockAuth, async (req: any, res) => {
+  app.get("/api/subscriptions", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const result = await db
@@ -737,7 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/subscriptions", mockAuth, async (req: any, res) => {
+  app.post("/api/subscriptions", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { name, amount, billingCycle, nextDueDate } = req.body;
@@ -765,7 +765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Income routes
-  app.get("/api/income", mockAuth, async (req: any, res) => {
+  app.get("/api/income", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const incomeRecords = await storage.getIncome();
       const clientsData = await storage.getClients();
@@ -786,7 +786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/income", mockAuth, async (req: any, res) => {
+  app.post("/api/income", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const validatedData = insertIncomeSchema.parse(req.body);
       const incomeData = {
@@ -802,7 +802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/income/:id", mockAuth, async (req: any, res) => {
+  app.put("/api/income/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertIncomeSchema.partial().parse(req.body);
@@ -817,7 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/income/:id", mockAuth, async (req: any, res) => {
+  app.delete("/api/income/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteIncome(id);
@@ -832,7 +832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Income CSV Import endpoint
-  app.post("/api/income/import", mockAuth, async (req: any, res) => {
+  app.post("/api/income/import", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { csvData } = req.body;
       if (!csvData) {
@@ -953,7 +953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/income/import", mockAuth, async (req: any, res) => {
+  app.post("/api/income/import", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { income: incomeData } = req.body;
       
@@ -1032,7 +1032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Income CSV import
-  app.post("/api/income/import", mockAuth, async (req: any, res) => {
+  app.post("/api/income/import", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { csvData } = req.body;
       if (!csvData || !Array.isArray(csvData)) {
@@ -1103,7 +1103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Expenses routes
-  app.get("/api/expenses", mockAuth, async (req: any, res) => {
+  app.get("/api/expenses", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const expenseRecords = await storage.getExpenses();
       const employeesData = await storage.getEmployees();
@@ -1122,7 +1122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/expenses", mockAuth, async (req: any, res) => {
+  app.post("/api/expenses", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const validatedData = insertExpenseSchema.parse(req.body);
       const expenseData = {
@@ -1138,7 +1138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/expenses/:id", mockAuth, async (req: any, res) => {
+  app.put("/api/expenses/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertExpenseSchema.partial().parse(req.body);
@@ -1153,7 +1153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/expenses/:id", mockAuth, async (req: any, res) => {
+  app.delete("/api/expenses/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteExpense(id);
@@ -1168,7 +1168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Expenses CSV import
-  app.post("/api/expenses/import", mockAuth, async (req: any, res) => {
+  app.post("/api/expenses/import", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { csvData } = req.body;
       if (!csvData || !Array.isArray(csvData)) {
@@ -1231,7 +1231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment Sources routes
-  app.get("/api/payment-sources", mockAuth, async (req: any, res) => {
+  app.get("/api/payment-sources", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const paymentSources = await storage.getPaymentSources();
       res.json(paymentSources);
@@ -1241,7 +1241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payment-sources", mockAuth, async (req: any, res) => {
+  app.post("/api/payment-sources", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const validatedData = insertPaymentSourceSchema.parse(req.body);
       const paymentSourceData = {
@@ -1428,7 +1428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/client-permissions/:clientId", mockAuth, async (req: any, res) => {
+  app.put("/api/client-permissions/:clientId", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { clientId } = req.params;
       const permissionsData = insertClientPermissionsSchema.parse(req.body);
@@ -1476,7 +1476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete client
-  app.delete("/api/clients/:id", mockAuth, async (req, res) => {
+  app.delete("/api/clients/:id", authenticateToken, requireSameOrganization, async (req, res) => {
     try {
       const { id } = req.params;
       const success = await storage.deleteClient(id);
@@ -1493,7 +1493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Subscription routes
-  app.get("/api/subscriptions", mockAuth, async (req: any, res) => {
+  app.get("/api/subscriptions", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const subscriptionRecords = await storage.getSubscriptions();
       const clientsData = await storage.getClients();
@@ -1516,7 +1516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/subscriptions", mockAuth, async (req: any, res) => {
+  app.post("/api/subscriptions", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const validatedData = insertSubscriptionSchema.parse(req.body);
       const subscriptionData = {
@@ -1531,7 +1531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/subscriptions/:id", mockAuth, async (req: any, res) => {
+  app.put("/api/subscriptions/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertSubscriptionSchema.partial().parse(req.body);
@@ -1546,7 +1546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/subscriptions/:id", mockAuth, async (req, res) => {
+  app.delete("/api/subscriptions/:id", authenticateToken, requireSameOrganization, async (req, res) => {
     try {
       const { id } = req.params;
       const success = await storage.deleteSubscription(id);
@@ -1563,7 +1563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Ensure owner user exists
-  app.post("/api/users/owner/ensure", mockAuth, async (req: any, res) => {
+  app.post("/api/users/owner/ensure", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id: userId, email, organizationId } = req.user;
       
@@ -1597,7 +1597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Management API Routes
-  app.get("/api/users", mockAuth, async (req: any, res) => {
+  app.get("/api/users", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const users = await storage.getUsers(organizationId);
@@ -1608,7 +1608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/users/invite", mockAuth, async (req: any, res) => {
+  app.post("/api/users/invite", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const invitedById = req.user.id || "mock-user-id";
@@ -1654,7 +1654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/users/:id/role", mockAuth, async (req: any, res) => {
+  app.put("/api/users/:id/role", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const validatedData = updateUserRoleSchema.parse(req.body);
@@ -1672,7 +1672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/users/:id/status", mockAuth, async (req: any, res) => {
+  app.put("/api/users/:id/status", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const validatedData = updateUserStatusSchema.parse(req.body);
@@ -1690,7 +1690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/users/:id", mockAuth, async (req: any, res) => {
+  app.delete("/api/users/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const success = await storage.deleteUser(id);
@@ -1707,7 +1707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Invitations API Routes
-  app.get("/api/user-invitations", mockAuth, async (req: any, res) => {
+  app.get("/api/user-invitations", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const invitations = await storage.getUserInvitations(organizationId);
@@ -1718,7 +1718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/user-invitations/:id/resend", mockAuth, async (req: any, res) => {
+  app.post("/api/user-invitations/:id/resend", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const organizationId = req.user.organizationId;
@@ -1771,7 +1771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/user-invitations/:id", mockAuth, async (req: any, res) => {
+  app.delete("/api/user-invitations/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const success = await storage.deleteInvitation(id);
