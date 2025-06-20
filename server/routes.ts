@@ -754,6 +754,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             row[header] = value;
           });
 
+          // Helper function to parse boolean values
+          function parseBooleanValue(value: string | boolean): boolean {
+            if (typeof value === 'boolean') return value;
+            if (!value) return false;
+            
+            const normalized = value.toString().toLowerCase().trim();
+            return ['true', 't', 'yes', 'y', '1', 'on'].includes(normalized);
+          }
+
           // Map CSV fields to database fields
           const incomeData: any = {
             organizationId: req.user.organizationId,
@@ -762,20 +771,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             date: parseFlexibleDate(row.date) || new Date().toISOString().split('T')[0],
             description: row.description || '',
             status: ['paid', 'pending', 'failed'].includes(row.status) ? row.status : 'paid',
-            isRecurring: row.is_recurring === 'true' || row.is_recurring === '1',
+            isRecurring: parseBooleanValue(row.is_recurring),
             invoiceId: row.invoice_id || null,
+            clientId: row.client_id || null,
+            paymentSourceId: row.payment_source_id || null,
           };
 
-          // Handle recurring frequency
-          if (incomeData.isRecurring && row.recurring_frequency) {
+          // Handle recurring frequency (always include if provided, regardless of isRecurring)
+          if (row.recurring_frequency) {
             const validFrequencies = ['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly'];
-            if (validFrequencies.includes(row.recurring_frequency)) {
-              incomeData.recurringFrequency = row.recurring_frequency;
+            if (validFrequencies.includes(row.recurring_frequency.toLowerCase())) {
+              incomeData.recurringFrequency = row.recurring_frequency.toLowerCase();
             }
           }
 
-          // Handle recurring end date
-          if (incomeData.isRecurring && row.recurring_end_date) {
+          // Handle recurring end date (always include if provided)
+          if (row.recurring_end_date) {
             const endDate = parseFlexibleDate(row.recurring_end_date);
             if (endDate) {
               incomeData.recurringEndDate = endDate;

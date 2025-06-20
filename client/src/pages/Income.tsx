@@ -209,11 +209,27 @@ export default function Income() {
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
     const dataLines = lines.slice(1);
     
+    // Helper function to parse boolean values
+    const parseBooleanValue = (value: string | boolean): boolean => {
+      if (typeof value === 'boolean') return value;
+      if (!value) return false;
+      
+      const normalized = value.toString().toLowerCase().trim();
+      return ['true', 't', 'yes', 'y', '1', 'on'].includes(normalized);
+    };
+    
     return dataLines.map(line => {
       const values = line.split(',').map(v => v.trim());
       const row: any = {};
       headers.forEach((header, index) => {
-        row[header] = values[index] || '';
+        const value = values[index] || '';
+        
+        // Handle special field parsing
+        if (header === 'is_recurring') {
+          row[header] = parseBooleanValue(value);
+        } else {
+          row[header] = value;
+        }
       });
       return row;
     });
@@ -489,7 +505,11 @@ export default function Income() {
                             <th className="text-left p-2 border-r">Category</th>
                             <th className="text-left p-2 border-r">Status</th>
                             <th className="text-left p-2 border-r">Recurring</th>
-                            <th className="text-left p-2">Frequency</th>
+                            <th className="text-left p-2 border-r">Frequency</th>
+                            <th className="text-left p-2 border-r">End Date</th>
+                            <th className="text-left p-2 border-r">Invoice ID</th>
+                            <th className="text-left p-2 border-r">Client ID</th>
+                            <th className="text-left p-2">Payment Source</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -510,8 +530,12 @@ export default function Income() {
                                   {row.status || 'paid'}
                                 </span>
                               </td>
-                              <td className="p-2 border-r">{row.is_recurring === 'true' ? 'Yes' : 'No'}</td>
-                              <td className="p-2">{row.recurring_frequency || '-'}</td>
+                              <td className="p-2 border-r">{row.is_recurring ? 'Yes' : 'No'}</td>
+                              <td className="p-2 border-r">{row.recurring_frequency || '-'}</td>
+                              <td className="p-2 border-r">{row.recurring_end_date || '-'}</td>
+                              <td className="p-2 border-r">{row.invoice_id || '-'}</td>
+                              <td className="p-2 border-r">{row.client_id || '-'}</td>
+                              <td className="p-2">{row.payment_source_id || '-'}</td>
                             </tr>
                           ))}
                         </tbody>
