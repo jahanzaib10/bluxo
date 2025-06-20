@@ -15,8 +15,8 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  method: "GET" | "POST" | "PUT" | "DELETE",
   url: string,
+  method: "GET" | "POST" | "PUT" | "DELETE",
   data?: any
 ): Promise<any> {
   const options: RequestInit = {
