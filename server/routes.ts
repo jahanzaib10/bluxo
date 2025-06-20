@@ -1797,7 +1797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Link expired" });
       }
       
-      res.json({ invitation: { email: invitation.email, role: invitation.role, type: invitation.type } });
+      res.json({ invitation });
     } catch (error) {
       console.error("Error verifying invitation:", error);
       res.status(500).json({ message: "Failed to verify invitation" });

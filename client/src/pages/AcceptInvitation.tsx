@@ -91,7 +91,8 @@ export default function AcceptInvitation() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
+    if (!status) return "text-gray-600";
     switch (status) {
       case "pending": return "text-yellow-600";
       case "expired": return "text-red-600";
@@ -151,16 +152,16 @@ export default function AcceptInvitation() {
     );
   }
 
-  if (invitation.status !== "pending") {
+  if (invitation && invitation.status !== "pending") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-slate-50">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-              {getStatusIcon(invitation.status)}
+              {getStatusIcon(invitation?.status || 'pending')}
             </div>
-            <CardTitle className={getStatusColor(invitation.status)}>
-              Invitation {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
+            <CardTitle className={getStatusColor(invitation?.status)}>
+              Invitation {invitation?.status ? invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1) : 'Loading...'}
             </CardTitle>
             <CardDescription>
               This invitation is no longer available for acceptance.
