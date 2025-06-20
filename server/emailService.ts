@@ -39,7 +39,7 @@ export async function sendInvitationEmail(
   invitationToken: string,
   organizationName: string = "DartNox"
 ): Promise<boolean> {
-  const inviteUrl = `${process.env.BASE_URL || 'https://your-app.replit.app'}/accept-invitation/${invitationToken}`;
+  const inviteUrl = `https://d191031c-a979-4e88-befc-caa97d4a07e9-00-r2xnof5rwtwe.riker.replit.dev/accept-invitation/${invitationToken}`;
   
   const isClientInvite = invitationType === "client";
   const roleDisplay = role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());

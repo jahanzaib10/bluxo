@@ -20,6 +20,7 @@ import PaymentSources from "./pages/settings/PaymentSources";
 import UserManagement from "./pages/settings/UserManagement";
 import ClientDashboard from "./pages/ClientDashboard";
 import ClientPortal from "./pages/ClientPortal";
+import AcceptInvitation from "./pages/AcceptInvitation";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -46,6 +47,9 @@ const App = () => (
             {/* Client portal and dashboard for client users */}
             <Route path="/client-portal" element={<ClientPortal />} />
             <Route path="/client-dashboard" element={<ClientDashboard />} />
+            
+            {/* Accept invitation route */}
+            <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
