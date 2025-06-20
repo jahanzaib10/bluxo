@@ -31,6 +31,7 @@ interface Employee {
 }
 
 export default function Employees() {
+  const [, setLocation] = useLocation();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
