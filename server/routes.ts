@@ -224,6 +224,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single employee
+  app.get("/api/employees/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = req.user.organizationId;
+      
+      const [employee] = await db
+        .select()
+        .from(employees)
+        .where(and(
+          eq(employees.id, id),
+          eq(employees.organizationId, organizationId)
+        ));
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      res.json(employee);
+    } catch (error) {
+      console.error("Error fetching employee:", error);
+      res.status(500).json({ message: "Failed to fetch employee" });
+    }
+  });
+
+  // Get employee expenses
+  app.get("/api/employees/:id/expenses", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = req.user.organizationId;
+      
+      // First verify employee exists and belongs to organization
+      const [employee] = await db
+        .select()
+        .from(employees)
+        .where(and(
+          eq(employees.id, id),
+          eq(employees.organizationId, organizationId)
+        ));
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      // Get expenses with enriched data
+      const result = await db
+        .select({
+          id: expenses.id,
+          amount: expenses.amount,
+          description: expenses.description,
+          date: expenses.date,
+          isRecurring: expenses.isRecurring,
+          recurringFrequency: expenses.recurringFrequency,
+          recurringEndDate: expenses.recurringEndDate,
+          createdAt: expenses.createdAt,
+          employeeId: expenses.employeeId,
+          categoryId: expenses.categoryId,
+          categoryName: categories.name,
+          categoryParentId: categories.parentId,
+        })
+        .from(expenses)
+        .leftJoin(categories, eq(expenses.categoryId, categories.id))
+        .where(and(
+          eq(expenses.employeeId, id),
+          eq(expenses.organizationId, organizationId)
+        ))
+        .orderBy(desc(expenses.createdAt));
+
+      // Get all categories to build hierarchical names
+      const allCategories = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.organizationId, organizationId));
+
+      // Enrich results with hierarchical category names
+      const enrichedResult = result.map(expense => {
+        let hierarchicalCategoryName = expense.categoryName;
+        
+        if (expense.categoryName && expense.categoryParentId) {
+          const parentCategory = allCategories.find(c => c.id === expense.categoryParentId);
+          if (parentCategory) {
+            hierarchicalCategoryName = `${parentCategory.name} → ${expense.categoryName}`;
+          }
+        }
+        
+        return {
+          ...expense,
+          categoryName: hierarchicalCategoryName
+        };
+      });
+      
+      res.json(enrichedResult);
+    } catch (error) {
+      console.error("Error fetching employee expenses:", error);
+      res.status(500).json({ message: "Failed to fetch employee expenses" });
+    }
+  });
+
   // Enhanced CSV import with data sanitization and validation
   function sanitizePaymentAmount(value: string): number | null {
     if (!value || typeof value !== 'string') return null;

@@ -1,0 +1,88 @@
+Build /employees/:employeeId/expenses Page with Full Expense Table
+🎯 Goal & Context (Why We’re Building This)
+We want to give Finance and HR teams full visibility into individual employee expenses across salary, bonuses, health, and more. Now that expenses are linked to employees, we need a dedicated page for each employee where admins can view, manage, and analyze all expenses specific to that person.
+
+This feature supports:
+
+✅ Better transparency for HR & payroll
+
+✅ Drill-down expense management per employee
+
+✅ Clean UX for reviewing salaries, bonuses, and recurring costs (e.g. allowances)
+
+✅ Employee-specific financial summaries
+
+It should function like the general /expenses page but scoped to a single employee.
+
+✅ What to Build
+🔗 Route: /employees/:employeeId/expenses
+Fetch the employee details (name, position)
+
+Fetch all expenses where employee_id = :employeeId
+
+💻 Page UI Layout
+Header:
+
+Employee name and job title
+
+“Back to Employees” button
+
+Summary: Total Expenses (sum of matched records)
+
+Table:
+
+Category → Show as Parent > Subcategory
+
+Amount
+
+Date
+
+Recurring → Icon + Frequency (if applicable)
+
+Description
+
+Actions → Edit / Delete buttons
+
+Add Expense Button:
+
+Opens modal pre-filled with the current employee_id
+
+Fields:
+
+Date
+
+Amount
+
+Description
+
+Is Recurring + Frequency + End Date
+
+Category (type = expense only)
+
+✅ Use shared components and styling from existing expense modules.
+
+🔌 API Endpoints to Use
+GET /api/employees/:id/expenses → fetch expenses
+
+POST /api/expenses → add expense
+
+PUT /api/expenses/:id → update
+
+DELETE /api/expenses/:id → delete
+
+🧪 QA Test Cases
+Test	Result
+Visit /employees/:id/expenses	Page loads with correct employee + expenses
+Click “Add Expense”	Modal opens → adds row to table
+Edit expense row	Updates inline
+Delete row	Removes row + updates total
+Recurring logic shows	Icon and frequency are visible
+
+🔁 Regression Rules
+Do not affect global /expenses route or /dashboard
+
+Do not break expense category filtering or recurring engine
+
+Use existing layout and expense form logic if possible
+
+📘 This is an employee-focused financial view — like a mini HR ledger — and must support full tracking of all direct employee-linked costs. Please keep context-aware and scoped tightly to that person.

@@ -16,6 +16,7 @@ import Expenses from "./pages/Expenses";
 import Subscriptions from "./pages/Subscriptions";
 import Clients from "./pages/Clients";
 import Employees from "./pages/Employees";
+import EmployeeExpenses from "./pages/EmployeeExpenses";
 import Settings from "./pages/Settings";
 import Categories from "./pages/settings/Categories";
 import PaymentSources from "./pages/settings/PaymentSources";
@@ -37,6 +38,7 @@ function AuthenticatedApp() {
         <Route path="/expenses" component={Expenses} />
         <Route path="/subscriptions" component={Subscriptions} />
         <Route path="/employees" component={Employees} />
+        <Route path="/employees/:employeeId/expenses" component={EmployeeExpenses} />
         <Route path="/clients" component={Clients} />
         <Route path="/settings" component={Settings} />
         <Route path="/settings/profile" component={() => <Settings defaultTab="profile" />} />
