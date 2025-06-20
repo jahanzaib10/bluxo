@@ -32,11 +32,13 @@ export default function AcceptInvitation() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Verify invitation token
-  const { data: invitation, isLoading, error } = useQuery({
+  const { data: response, isLoading, error } = useQuery({
     queryKey: ["/api/invitations/verify", token],
     queryFn: () => apiRequest(`/api/invitations/verify/${token}`, "GET"),
     retry: false,
   });
+
+  const invitation = response?.invitation;
 
   const form = useForm<AcceptInvitationForm>({
     resolver: zodResolver(acceptInvitationSchema),
