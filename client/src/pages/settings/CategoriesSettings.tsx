@@ -171,9 +171,18 @@ export default function CategoriesSettings() {
       return await apiRequest('/api/categories/import', 'POST', { data });
     },
     onSuccess: (result: any) => {
+      let description = `Successfully imported ${result.imported} categories`;
+      if (result.skipped > 0) {
+        description += `, ${result.skipped} duplicates skipped`;
+      }
+      if (result.errors > 0) {
+        description += `, ${result.errors} errors`;
+      }
+      
       toast({
-        title: "Import Successful",
-        description: `Successfully imported ${result.imported} of ${result.total} categories`,
+        title: "Import Completed",
+        description,
+        variant: result.errors > 0 ? "destructive" : "default",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
       setIsImportDialogOpen(false);

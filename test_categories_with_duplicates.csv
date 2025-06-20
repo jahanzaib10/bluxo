@@ -1,0 +1,21 @@
+name,type,parent_name
+Software Development,expense,
+Marketing Campaigns,expense,
+Office Supplies,expense,
+Client Consulting,income,
+Software Development,expense,
+Freelance Projects,income,
+Marketing Campaigns,expense,
+Web Hosting,expense,Software Development
+Database Services,expense,Software Development
+Social Media Ads,expense,Marketing Campaigns
+Print Materials,expense,Marketing Campaigns
+Client Consulting,income,
+Training Services,income,
+Office Rent,expense,
+Equipment Purchase,expense,
+Travel Expenses,expense,
+Software Development,expense,
+New Category,expense,
+Duplicate Test,income,
+Duplicate Test,income,
