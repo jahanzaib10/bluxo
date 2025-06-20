@@ -54,7 +54,7 @@ export function Layout({ children }: LayoutProps) {
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center border-b px-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <TrendingUp className="h-4 w-4" />
           </div>
@@ -62,10 +62,11 @@ export function Layout({ children }: LayoutProps) {
             <span className="text-lg font-semibold">FinanceSaaS</span>
           )}
         </div>
+
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className={cn("flex-1 space-y-1", sidebarCollapsed && !mobile ? "p-2" : "p-4")}>
         {/* Main Navigation */}
         <div className="space-y-1">
           {mainNavItems.map((item) => {
@@ -77,11 +78,15 @@ export function Layout({ children }: LayoutProps) {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  "flex items-center rounded-lg text-sm font-medium transition-colors",
+                  sidebarCollapsed && !mobile 
+                    ? "justify-center px-2 py-2" 
+                    : "gap-3 px-3 py-2",
                   isActive
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
+                title={sidebarCollapsed && !mobile ? item.label : undefined}
               >
                 <Icon className="h-4 w-4" />
                 {(!sidebarCollapsed || mobile) && <span>{item.label}</span>}
@@ -107,11 +112,15 @@ export function Layout({ children }: LayoutProps) {
                   key={item.path}
                   to={item.path}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center rounded-lg text-sm font-medium transition-colors",
+                    sidebarCollapsed && !mobile 
+                      ? "justify-center px-2 py-2" 
+                      : "gap-3 px-3 py-2",
                     isActive
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
+                  title={sidebarCollapsed && !mobile ? item.label : undefined}
                 >
                   <Icon className="h-4 w-4" />
                   {(!sidebarCollapsed || mobile) && <span>{item.label}</span>}
