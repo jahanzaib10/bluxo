@@ -1288,6 +1288,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email-based client auth token request
+  app.post("/api/client-auth/request-by-email", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      const client = await storage.getClientByEmail(email);
+      if (!client) {
+        return res.status(404).json({ message: "No client found with this email address" });
+      }
+      
+      const authToken = await storage.createClientAuthToken(client.id, email);
+      
+      // In a real application, you would send this token via email
+      // For demo purposes, we return it in the response
+      res.json({ 
+        message: "Access token sent to your email", 
+        token: authToken.token,
+        expiresAt: authToken.expiresAt 
+      });
+    } catch (error) {
+      console.error("Error creating client auth token by email:", error);
+      res.status(500).json({ message: "Failed to send access token" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

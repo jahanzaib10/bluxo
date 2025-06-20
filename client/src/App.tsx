@@ -19,6 +19,7 @@ import Categories from "./pages/settings/Categories";
 import PaymentSources from "./pages/settings/PaymentSources";
 import UserManagement from "./pages/settings/UserManagement";
 import ClientDashboard from "./pages/ClientDashboard";
+import ClientPortal from "./pages/ClientPortal";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -42,7 +43,8 @@ const App = () => (
               <Route path="settings/user-management" element={<UserManagement />} />
             </Route>
             
-            {/* Client dashboard for client users */}
+            {/* Client portal and dashboard for client users */}
+            <Route path="/client-portal" element={<ClientPortal />} />
             <Route path="/client-dashboard" element={<ClientDashboard />} />
             
             <Route path="*" element={<NotFound />} />

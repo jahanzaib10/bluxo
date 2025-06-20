@@ -71,6 +71,7 @@ export default function ClientDashboard() {
   const handleAuthentication = async () => {
     try {
       const response = await apiRequest("/api/client-auth/verify", "POST", { token });
+      setClientData(response);
       setIsAuthenticated(true);
       toast({
         title: "Access Granted",
@@ -87,27 +88,12 @@ export default function ClientDashboard() {
     }
   };
 
-  const { data: dashboardData, isLoading } = useQuery<ClientDashboardData>({
-    queryKey: ["/api/client-dashboard", clientData?.client?.id],
-    enabled: isAuthenticated && !!clientData?.client?.id,
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
-
+  // Auto-authenticate if token exists
   useEffect(() => {
-    if (isAuthenticated && token) {
-      fetchDashboardData();
+    if (token && !isAuthenticated) {
+      handleAuthentication();
     }
-  }, [isAuthenticated, token]);
-
-  const fetchDashboardData = async () => {
-    try {
-      const response = await apiRequest("/api/client-auth/verify", "POST", { token });
-      const dashboardResponse = await apiRequest(`/api/client-dashboard/${response.client.id}`, "GET");
-      setClientData(dashboardResponse);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    }
-  };
+  }, [token, isAuthenticated]);
 
   const handleLogout = () => {
     setIsAuthenticated(false);
