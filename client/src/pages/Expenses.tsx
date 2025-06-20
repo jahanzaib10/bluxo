@@ -794,6 +794,22 @@ export default function Expenses() {
                     {record.description || 'N/A'}
                   </TableCell>
                   <TableCell>
+                    {record.isRecurring ? (
+                      <div className="space-y-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {record.recurringFrequency?.charAt(0).toUpperCase() + record.recurringFrequency?.slice(1) || 'Recurring'}
+                        </Badge>
+                        {record.recurringEndDate && (
+                          <div className="text-xs text-muted-foreground">
+                            Until {new Date(record.recurringEndDate).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">One-time</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <div className="flex space-x-2">
                       <Button
                         variant="ghost"
