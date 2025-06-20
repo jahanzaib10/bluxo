@@ -53,6 +53,32 @@ export default function CategoriesSettings() {
     queryKey: ['/api/categories'],
   });
 
+  // Organize categories hierarchically
+  const organizeHierarchically = (categories: Category[]) => {
+    if (!categories) return [];
+    
+    const categoryMap = new Map(categories.map(cat => [cat.id, cat]));
+    const organized: (Category & { level: number; children?: Category[] })[] = [];
+    
+    // First, add all top-level categories (no parent)
+    const topLevel = categories.filter(cat => !cat.parentId);
+    
+    const addCategoryWithChildren = (category: Category, level: number = 0) => {
+      const categoryWithLevel = { ...category, level, children: [] };
+      organized.push(categoryWithLevel);
+      
+      // Find and add children
+      const children = categories.filter(cat => cat.parentId === category.id);
+      children.forEach(child => addCategoryWithChildren(child, level + 1));
+    };
+    
+    topLevel.forEach(cat => addCategoryWithChildren(cat));
+    
+    return organized;
+  };
+
+  const hierarchicalCategories = organizeHierarchically(categories || []);
+
   const form = useForm({
     resolver: zodResolver(categorySchema),
     defaultValues: {
@@ -200,8 +226,9 @@ export default function CategoriesSettings() {
     if (lines.length < 2) return [];
 
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const nameIndex = headers.findIndex(h => h.includes('name'));
+    const nameIndex = headers.findIndex(h => h.includes('name') && !h.includes('parent'));
     const typeIndex = headers.findIndex(h => h.includes('type'));
+    const parentIndex = headers.findIndex(h => h.includes('parent') && h.includes('name'));
 
     if (nameIndex === -1 || typeIndex === -1) {
       throw new Error('CSV must contain "name" and "type" columns');
@@ -215,11 +242,13 @@ export default function CategoriesSettings() {
 
       const name = values[nameIndex];
       const type = values[typeIndex]?.toLowerCase();
+      const parentName = parentIndex !== -1 && values[parentIndex] ? values[parentIndex] : undefined;
 
       if (name && (type === 'income' || type === 'expense')) {
         data.push({
           name: name,
-          type: type as 'income' | 'expense'
+          type: type as 'income' | 'expense',
+          parent_name: parentName
         });
       }
     }
@@ -277,7 +306,7 @@ export default function CategoriesSettings() {
                   Import Categories from CSV
                 </DialogTitle>
                 <DialogDescription>
-                  Upload a CSV file with category data. Expected format: name, type (income or expense)
+                  Upload a CSV file with category data. Expected format: name, type (income or expense), parent_name (optional for hierarchical categories)
                 </DialogDescription>
               </DialogHeader>
 
@@ -326,6 +355,7 @@ export default function CategoriesSettings() {
                           <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Type</TableHead>
+                            <TableHead>Parent Category</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -336,6 +366,9 @@ export default function CategoriesSettings() {
                                 <Badge variant={category.type === 'income' ? 'default' : 'secondary'}>
                                   {category.type}
                                 </Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {category.parent_name || '—'}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -478,10 +511,24 @@ export default function CategoriesSettings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categories?.length ? (
-                  categories.map((category) => (
+                {hierarchicalCategories?.length ? (
+                  hierarchicalCategories.map((category) => (
                     <TableRow key={category.id}>
-                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center">
+                          {/* Indentation for hierarchy */}
+                          {category.level > 0 && (
+                            <div 
+                              className="border-l border-muted-foreground/20 mr-2" 
+                              style={{ marginLeft: `${category.level * 16}px`, width: '2px', height: '20px' }} 
+                            />
+                          )}
+                          <span style={{ paddingLeft: `${category.level * 16}px` }}>
+                            {category.level > 0 && "└─ "}
+                            {category.name}
+                          </span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={category.type === 'income' ? 'default' : 'secondary'}>
                           {category.type}

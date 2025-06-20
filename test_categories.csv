@@ -1,0 +1,12 @@
+name,type,parent_name
+Marketing,expense,
+Social Media,expense,Marketing
+Google Ads,expense,Marketing
+Development,expense,
+Frontend,expense,Development
+Backend,expense,Development
+Sales Revenue,income,
+Direct Sales,income,Sales Revenue
+Subscription Revenue,income,Sales Revenue
+Office Supplies,expense,
+Software Licenses,expense,

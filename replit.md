@@ -223,6 +223,14 @@ Changelog:
   * Verified frontend properly receives and displays organization-isolated user data
   * Enhanced authentication system with proper password verification using bcryptjs
   * Completed comprehensive testing confirming organization isolation works correctly
+- June 20, 2025. Hierarchical category system implementation completed
+  * Enhanced categories schema with parent_id foreign key for self-referencing hierarchical structure
+  * Updated CSV import system to support parent_name field with automatic parent resolution
+  * Implemented two-pass category insertion to handle parent-child dependencies correctly
+  * Created hierarchical organization function to display categories with proper tree structure
+  * Enhanced frontend table display with visual indentation and tree-like formatting
+  * Added comprehensive parent_name validation and error handling during CSV import
+  * Updated category forms and interfaces to support optional parent category selection
 ```
 
 ## User Preferences
