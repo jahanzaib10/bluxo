@@ -283,10 +283,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       position: ['position', 'job_title', 'title', 'role', 'job title', 'job_title'],
       country: ['country', 'location', 'region'],
       startDate: ['start_date', 'start_dt', 'hire_date', 'joining_date', 'start date', 'hire date'],
-      endDate: ['end_date', 'end_dt', 'termination_date', 'leaving_date', 'end date'],
+      endDate: ['end_date', 'end_dt', 'termination_date', 'leaving_date', 'end date', 'termination date'],
       birthDate: ['birth_date', 'date_of_birth', 'dob', 'birth date', 'date of birth'],
       seniorityLevel: ['seniority_level', 'level', 'grade', 'seniority', 'seniority level'],
       paymentAmount: ['payment_amount', 'salary', 'compensation', 'pay', 'amount', 'payment'],
+      directManagerName: ['direct_manager_name', 'manager', 'supervisor', 'direct_manager', 'manager_name', 'direct manager', 'manager name'],
       groupName: ['group_name', 'group', 'department', 'team', 'division', 'group name'],
       status: ['status', 'employment_status', 'state', 'employment status']
     };

@@ -49,6 +49,7 @@ export default function Employees() {
     birthDate: "",
     seniorityLevel: "",
     paymentAmount: "",
+    directManagerId: "",
     groupName: "",
     status: "active",
   });
@@ -151,6 +152,7 @@ export default function Employees() {
       birthDate: "",
       seniorityLevel: "",
       paymentAmount: "",
+      directManagerId: "",
       groupName: "",
       status: "active",
     });
@@ -177,6 +179,7 @@ export default function Employees() {
       birthDate: employee.birthDate || "",
       seniorityLevel: employee.seniorityLevel || "",
       paymentAmount: employee.paymentAmount?.toString() || "",
+      directManagerId: employee.directManagerId || "",
       groupName: employee.groupName || "",
       status: employee.status,
     });
@@ -434,6 +437,22 @@ export default function Employees() {
                       onChange={(e) => setFormData(prev => ({ ...prev, paymentAmount: e.target.value }))}
                       placeholder="e.g., 150000.00"
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="directManagerId">Manager</Label>
+                    <Select value={formData.directManagerId} onValueChange={(value) => setFormData(prev => ({ ...prev, directManagerId: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select manager (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No Manager</SelectItem>
+                        {(employees as Employee[]).map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id}>
+                            {emp.name} - {emp.position}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor="groupName">Group/Department</Label>
