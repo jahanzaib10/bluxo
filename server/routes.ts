@@ -11,7 +11,9 @@ import {
   paymentSources,
   insertIncomeSchema,
   insertExpenseSchema,
-  insertPaymentSourceSchema
+  insertPaymentSourceSchema,
+  insertClientPermissionsSchema,
+  clientAuthRequestSchema
 } from "@shared/schema";
 import { storage } from "./storage";
 import { eq, sum, desc, and } from "drizzle-orm";
