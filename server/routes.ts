@@ -1185,7 +1185,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid or expired token" });
       }
 
-      await storage.markTokenAsUsed(token);
+      // Don't mark token as used immediately - allow multiple dashboard accesses
+      // await storage.markTokenAsUsed(token);
       
       // Get complete dashboard data
       const permissions = await storage.getClientPermissions(client.id);
