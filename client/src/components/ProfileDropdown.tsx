@@ -17,8 +17,18 @@ import { queryClient } from '@/lib/queryClient';
 export default function ProfileDropdown() {
   const { user } = useAuth();
 
-  const handleLogout = () => {
-    // Clear authentication data immediately
+  const handleLogout = async () => {
+    try {
+      // Call the server logout endpoint to clear HTTP-only cookie
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Logout API call failed:', error);
+    }
+    
+    // Clear client-side authentication data
     document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
     localStorage.removeItem('auth_token');
     
