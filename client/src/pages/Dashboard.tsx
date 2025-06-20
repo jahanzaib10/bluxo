@@ -47,7 +47,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${stats?.totalIncome?.toLocaleString() || '0'}
+                ${(stats as any)?.totalIncome || '0'}
               </div>
             </CardContent>
           </Card>
@@ -59,7 +59,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${stats?.totalSpending?.toLocaleString() || '0'}
+                ${(stats as any)?.totalSpending || '0'}
               </div>
             </CardContent>
           </Card>
@@ -71,7 +71,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${stats?.netIncome?.toLocaleString() || '0'}
+                ${(stats as any)?.netIncome || '0'}
               </div>
             </CardContent>
           </Card>
@@ -83,7 +83,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${stats?.monthlyNet?.toLocaleString() || '0'}
+                ${(stats as any)?.monthlyNet || '0'}
               </div>
             </CardContent>
           </Card>
