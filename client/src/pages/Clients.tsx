@@ -421,6 +421,7 @@ export default function Clients() {
                             <th className="p-2 text-left">Email</th>
                             <th className="p-2 text-left">Phone</th>
                             <th className="p-2 text-left">Website</th>
+                            <th className="p-2 text-left">Address</th>
                             <th className="p-2 text-left">Industry</th>
                             <th className="p-2 text-left">Contact Name</th>
                             <th className="p-2 text-left">Contact Email</th>
@@ -433,6 +434,7 @@ export default function Clients() {
                               <td className="p-2">{row.email || ""}</td>
                               <td className="p-2">{row.phone || ""}</td>
                               <td className="p-2">{row.website || ""}</td>
+                              <td className="p-2">{row.address || ""}</td>
                               <td className="p-2">{row.industry || ""}</td>
                               <td className="p-2">{row.contactName || row.contactname || ""}</td>
                               <td className="p-2">{row.contactEmail || row.contactemail || ""}</td>
