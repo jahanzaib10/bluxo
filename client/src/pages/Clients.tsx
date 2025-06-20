@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Mail, Phone, Globe, Building, User, Settings, Eye, Calendar, DollarSign, Trash2 } from "lucide-react";
+import { Plus, Mail, Phone, Globe, Building, User, Settings, Eye, Calendar, DollarSign, Trash2, Upload, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,8 +39,14 @@ export default function Clients() {
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [authToken, setAuthToken] = useState<string>("");
+  const [csvData, setCsvData] = useState<any[]>([]);
+  const [csvPreview, setCsvPreview] = useState<any[]>([]);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -189,6 +196,134 @@ export default function Clients() {
     setIsDeleteModalOpen(true);
   };
 
+  const importMutation = useMutation({
+    mutationFn: async (clientData: any[]) => {
+      return await apiRequest("/api/clients/import", "POST", { clients: clientData });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({ title: `Successfully imported ${variables.length} clients` });
+      setIsImportOpen(false);
+      setCsvData([]);
+      setCsvPreview([]);
+      setShowPreview(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to import clients", variant: "destructive" });
+    },
+  });
+
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    result.push(current.trim());
+    return result;
+  };
+
+  const parseCSV = (csvText: string) => {
+    const lines = csvText.split('\n').filter(line => line.trim());
+    if (lines.length === 0) return { headers: [], data: [] };
+    
+    const headers = parseCSVLine(lines[0]);
+    const data: any[] = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseCSVLine(lines[i]);
+      const row: any = {};
+      
+      headers.forEach((header, index) => {
+        const normalizedHeader = header.toLowerCase().replace(/[^a-z]/g, '');
+        let fieldName = '';
+        
+        // Map CSV headers to expected field names
+        switch (normalizedHeader) {
+          case 'name':
+            fieldName = 'name';
+            break;
+          case 'email':
+            fieldName = 'email';
+            break;
+          case 'phone':
+            fieldName = 'phone';
+            break;
+          case 'website':
+            fieldName = 'website';
+            break;
+          case 'address':
+            fieldName = 'address';
+            break;
+          case 'industry':
+            fieldName = 'industry';
+            break;
+          case 'contactname':
+            fieldName = 'contactName';
+            break;
+          case 'contactemail':
+            fieldName = 'contactEmail';
+            break;
+          default:
+            fieldName = header;
+        }
+        
+        row[fieldName] = values[index] || '';
+      });
+      
+      // Only add rows with required name field
+      if (row.name && row.name.trim()) {
+        data.push(row);
+      }
+    }
+    
+    return { headers, data };
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const csvText = e.target?.result as string;
+      const { headers, data } = parseCSV(csvText);
+      
+      setCsvData(data);
+      setCsvPreview(data.slice(0, 10)); // Show first 10 rows for preview
+      setCsvHeaders(headers);
+      setShowPreview(true);
+    };
+    reader.readAsText(file);
+  };
+
+  const downloadTemplate = () => {
+    const template = "name,email,phone,website,address,industry,contact_name,contact_email\nTechCorp Solutions,admin@techcorp.com,+1-555-0123,https://techcorp.com,123 Tech Street,Technology,John Smith,john@techcorp.com\nDigital Marketing Pro,info@digitalmarketing.com,+1-555-0456,https://digitalmarketing.com,456 Marketing Ave,Marketing,Jane Doe,jane@digitalmarketing.com\nGreen Energy Co,contact@greenenergy.com,+1-555-0789,https://greenenergy.com,789 Energy Blvd,Energy,Bob Johnson,bob@greenenergy.com";
+    const blob = new Blob([template], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'clients_template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleImport = () => {
+    importMutation.mutate(csvData);
+  };
+
   const handleDeleteClient = () => {
     if (selectedClient) {
       deleteClientMutation.mutate(selectedClient.id);
@@ -212,13 +347,102 @@ export default function Clients() {
           <h1 className="text-2xl font-bold">Clients</h1>
           <p className="text-muted-foreground">Manage your clients and their dashboard access</p>
         </div>
-        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Client
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby="csv-import-description">
+              <DialogHeader>
+                <DialogTitle>Import Clients from CSV</DialogTitle>
+                <div id="csv-import-description" className="text-sm text-gray-600">
+                  Upload a CSV file to import client data. Preview and verify the data before importing.
+                </div>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={downloadTemplate}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Template
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Choose CSV File
+                  </Button>
+                </div>
+                
+                {showPreview && csvPreview.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Preview ({csvData.length} total records)</h3>
+                    <div className="text-xs text-gray-600 mb-2">
+                      CSV Headers: {csvHeaders.join(", ")}
+                    </div>
+                    <div className="border rounded-lg overflow-x-auto">
+                      <Table className="min-w-max">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Phone</TableHead>
+                            <TableHead>Website</TableHead>
+                            <TableHead>Address</TableHead>
+                            <TableHead>Industry</TableHead>
+                            <TableHead>Contact Name</TableHead>
+                            <TableHead>Contact Email</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {csvPreview.map((row, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="whitespace-nowrap">{row.name || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.email || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.phone || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.website || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.address || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.industry || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.contactName || "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{row.contactEmail || "—"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-4">
+                      <Button variant="outline" onClick={() => {setCsvData([]); setCsvPreview([]); setShowPreview(false);}}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleImport} disabled={importMutation.isPending}>
+                        {importMutation.isPending ? "Importing..." : `Import ${csvData.length} Clients`}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Client
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Client</DialogTitle>
@@ -757,6 +981,7 @@ export default function Clients() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
