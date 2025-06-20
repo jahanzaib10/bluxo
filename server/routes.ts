@@ -1600,7 +1600,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
+      console.log(`[DEBUG] Fetching users for organization: ${organizationId}, requested by user: ${req.user.email}`);
       const users = await storage.getUsers(organizationId);
+      console.log(`[DEBUG] Found ${users.length} users:`, users.map(u => ({ id: u.id, email: u.email, orgId: u.organizationId })));
       res.json(users);
     } catch (error) {
       console.error("Error fetching users:", error);
