@@ -323,9 +323,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // First, get existing employees to create name-to-ID mapping for manager resolution
+      const existingEmployees = await db
+        .select({ id: employees.id, name: employees.name })
+        .from(employees)
+        .where(eq(employees.organizationId, organizationId));
+      
+      const employeeNameMap = new Map<string, string>();
+      existingEmployees.forEach(emp => {
+        employeeNameMap.set(emp.name.toLowerCase().trim(), emp.id);
+      });
+      
       const processedEmployees = [];
       const errors = [];
       
+      // First pass: Process all employees without manager references
       for (let i = 0; i < employeeData.length; i++) {
         const rawRow = employeeData[i];
         const row = mapCsvFields(rawRow);
@@ -364,6 +376,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           groupName: row.groupName?.toString().trim() || null,
           status: normalizeText(row.status?.toString()) || 'active',
           organizationId,
+          directManagerId: null, // Will be resolved in second pass
+          managerName: row.directManagerName?.toString().trim() || null, // Store for resolution
         };
         
         // Validate start_date if provided (required field in schema)
@@ -373,6 +387,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         processedEmployees.push(processedEmployee);
+        
+        // Add to name map for potential manager references within the same batch
+        employeeNameMap.set(name.toLowerCase().trim(), 'pending');
       }
       
       // Return errors if any critical validation failed
@@ -385,13 +402,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Insert valid employees
+      // Insert employees without manager references first
       let insertedEmployees = [];
-      if (processedEmployees.length > 0) {
+      const employeesWithoutManagers = processedEmployees.map(emp => {
+        const { managerName, ...employeeData } = emp;
+        return employeeData;
+      });
+      
+      if (employeesWithoutManagers.length > 0) {
         insertedEmployees = await db
           .insert(employees)
-          .values(processedEmployees)
+          .values(employeesWithoutManagers)
           .returning();
+      }
+      
+      // Second pass: Update manager references
+      const managerUpdates = [];
+      for (let i = 0; i < processedEmployees.length; i++) {
+        const processedEmp = processedEmployees[i];
+        const insertedEmp = insertedEmployees[i];
+        
+        if (processedEmp.managerName && insertedEmp) {
+          const managerName = processedEmp.managerName.toLowerCase().trim();
+          
+          // Try to find manager in existing employees first
+          let managerId = employeeNameMap.get(managerName);
+          
+          // If not found in existing, try to find in current batch
+          if (!managerId || managerId === 'pending') {
+            const managerInBatch = insertedEmployees.find(emp => 
+              emp.name.toLowerCase().trim() === managerName
+            );
+            if (managerInBatch) {
+              managerId = managerInBatch.id;
+            }
+          }
+          
+          if (managerId && managerId !== 'pending') {
+            managerUpdates.push({
+              employeeId: insertedEmp.id,
+              managerId: managerId
+            });
+          } else {
+            errors.push(`Row ${i + 1}: Manager '${processedEmp.managerName}' not found`);
+          }
+        }
+      }
+      
+      // Apply manager updates
+      for (const update of managerUpdates) {
+        await db
+          .update(employees)
+          .set({ directManagerId: update.managerId })
+          .where(eq(employees.id, update.employeeId));
       }
       
       // Return comprehensive response

@@ -61,7 +61,7 @@ export default function Employees() {
   });
 
   // Create a map of employee IDs to names for manager lookup
-  const employeeMap = employees.reduce((acc: Record<string, string>, emp: Employee) => {
+  const employeeMap = (employees as Employee[]).reduce((acc: Record<string, string>, emp: Employee) => {
     acc[emp.id] = emp.name;
     return acc;
   }, {});
@@ -229,7 +229,7 @@ export default function Employees() {
     importMutation.mutate(csvData);
   };
 
-  const filteredEmployees = employees.filter((employee: Employee) =>
+  const filteredEmployees = (employees as Employee[]).filter((employee: Employee) =>
     employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.position?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -293,6 +293,9 @@ export default function Employees() {
                             <TableHead>Seniority</TableHead>
                             <TableHead>Payment</TableHead>
                             <TableHead>Start Date</TableHead>
+                            <TableHead>End Date</TableHead>
+                            <TableHead>Birth Date</TableHead>
+                            <TableHead>Manager</TableHead>
                             <TableHead>Status</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -306,6 +309,9 @@ export default function Employees() {
                               <TableCell>{row.seniority_level || row.level || "—"}</TableCell>
                               <TableCell>{row.payment_amount || row.salary || "—"}</TableCell>
                               <TableCell>{row.start_date || row.hire_date || "—"}</TableCell>
+                              <TableCell>{row.end_date || row.termination_date || "—"}</TableCell>
+                              <TableCell>{row.birth_date || row.dob || "—"}</TableCell>
+                              <TableCell>{row.direct_manager_name || row.manager || row.supervisor || "—"}</TableCell>
                               <TableCell>{row.status || "active"}</TableCell>
                             </TableRow>
                           ))}
