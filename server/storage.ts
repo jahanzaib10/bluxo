@@ -1,6 +1,8 @@
 import { 
   categories, 
   clients, 
+  clientPermissions,
+  clientAuthTokens,
   employees,
   paymentSources,
   income,
@@ -10,6 +12,9 @@ import {
   type InsertCategory,
   type Client, 
   type InsertClient,
+  type ClientPermissions,
+  type InsertClientPermissions,
+  type ClientAuthToken,
   type Employee, 
   type InsertEmployee,
   type PaymentSource,

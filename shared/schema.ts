@@ -47,7 +47,35 @@ export const clients = pgTable("clients", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email"),
+  phone: varchar("phone"),
+  website: varchar("website"),
+  address: text("address"),
+  industry: varchar("industry"),
+  contactName: varchar("contact_name"),
+  contactEmail: varchar("contact_email"),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const clientPermissions = pgTable("client_permissions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id").references(() => clients.id).notNull(),
+  showIncomeGraph: boolean("show_income_graph").default(true),
+  showCategoryBreakdown: boolean("show_category_breakdown").default(true),
+  showPaymentHistory: boolean("show_payment_history").default(true),
+  showInvoices: boolean("show_invoices").default(false),
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const clientAuthTokens = pgTable("client_auth_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  clientId: uuid("client_id").references(() => clients.id).notNull(),
+  email: varchar("email").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -153,6 +181,26 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
     references: [organizations.id],
   }),
   income: many(income),
+  permissions: one(clientPermissions),
+  authTokens: many(clientAuthTokens),
+}));
+
+export const clientPermissionsRelations = relations(clientPermissions, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientPermissions.clientId],
+    references: [clients.id],
+  }),
+  organization: one(organizations, {
+    fields: [clientPermissions.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const clientAuthTokensRelations = relations(clientAuthTokens, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientAuthTokens.clientId],
+    references: [clients.id],
+  }),
 }));
 
 export const employeesRelations = relations(employees, ({ one, many }) => ({
@@ -225,6 +273,24 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
 export const insertClientSchema = z.object({
   name: z.string().min(1),
   email: z.string().email().optional(),
+  phone: z.string().optional(),
+  website: z.string().url().optional().or(z.literal("")),
+  address: z.string().optional(),
+  industry: z.string().optional(),
+  contactName: z.string().optional(),
+  contactEmail: z.string().email().optional().or(z.literal("")),
+});
+
+export const insertClientPermissionsSchema = z.object({
+  clientId: z.string().uuid(),
+  showIncomeGraph: z.boolean().default(true),
+  showCategoryBreakdown: z.boolean().default(true),
+  showPaymentHistory: z.boolean().default(true),
+  showInvoices: z.boolean().default(false),
+});
+
+export const clientAuthRequestSchema = z.object({
+  email: z.string().email(),
 });
 
 export const insertEmployeeSchema = z.object({
@@ -282,6 +348,8 @@ export const upsertUserSchema = createInsertSchema(users).partial().extend({
 export type Organization = typeof organizations.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Client = typeof clients.$inferSelect;
+export type ClientPermissions = typeof clientPermissions.$inferSelect;
+export type ClientAuthToken = typeof clientAuthTokens.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type PaymentSource = typeof paymentSources.$inferSelect;
@@ -291,6 +359,8 @@ export type Subscription = typeof subscriptions.$inferSelect;
 
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertClient = z.infer<typeof insertClientSchema>;
+export type InsertClientPermissions = z.infer<typeof insertClientPermissionsSchema>;
+export type ClientAuthRequest = z.infer<typeof clientAuthRequestSchema>;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertPaymentSource = z.infer<typeof insertPaymentSourceSchema>;

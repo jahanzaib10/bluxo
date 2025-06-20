@@ -1,0 +1,75 @@
+Please build a modern `/clients` system with profile access and private dashboards.
+
+---
+
+✅ Part 1: /clients Page
+
+- Display clients in a **card-based layout** (name, email, phone)
+- Use cards with copy-to-clipboard and view-profile icons
+- Show total number of clients and search bar
+
+---
+
+✅ Part 2: Nested Route `{{client.name}}/profile`
+
+- Route path: `/clients/[clientId]/profile`
+- On this profile page, show:
+  - **Tab 1: Overview**
+    - Client name, contact info, and financial summaries (total income, latest payments)
+  - **Tab 2: Permissions**
+    - Toggle what this client can see on their private dashboard
+    - Settings include: show income graph, show category breakdown, etc.
+  - Copy link + Open link to private dashboard: `/client/[clientId]`
+
+---
+
+✅ Part 3: Private Dashboard Portal
+
+- Route: `/client/[clientId]`
+- Client enters email → validate against client table
+- If valid, send them an email with a unique, time-limited token link (e.g. valid 10 minutes)
+- When client opens the link, they are redirected to a secured dashboard route: `/client-dashboard/[token]`
+
+---
+
+✅ Private Client Dashboard Behavior
+
+- Render charts and views only if permission flags allow (from Tab 2)
+- View-only mode — no edit buttons or interactions
+- Show: income history, trend chart, category breakdown, optionally invoices
+
+---
+
+✅ Import CSV Feature
+
+- Add `Import CSV` button to `/clients`
+- Use the provided template:
+  - `name`, `email`, `phone`, `website`, `address`, `industry`, `contact_name`, `contact_email`
+- Show preview modal before import
+- All clients should be linked to current `organization_id`
+
+---
+
+📘 Swagger Docs
+
+- `POST /api/clients/import`
+- `POST /api/client-auth/request-link`
+- `GET /api/client-dashboard/:token`
+- `GET /api/clients/:id/permissions`
+
+---
+
+✅ QA Test Cases
+
+- Upload CSV → preview → import success
+- Click on client → see profile tabs
+- Toggle permissions → dashboard hides/shows widgets
+- Client enters email → gets email link → token opens valid dashboard
+- Invalid email/token → error screen
+
+---
+
+🔁 Regression
+
+- Do not touch login/signup routes
+- Do not affect existing `/income`, `/employees` modules
