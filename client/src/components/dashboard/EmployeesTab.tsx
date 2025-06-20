@@ -43,16 +43,17 @@ export function EmployeesTab() {
 
   // Then get manager information separately and merge
   const enrichedEmployees = React.useMemo(() => {
-    if (!employees.length) return [];
+    const employeeList = Array.isArray(employees) ? employees : [];
+    if (!employeeList.length) return [];
     
     // Create a map of employee ID to employee info for manager lookup
-    const employeeMap = employees.reduce((acc: any, emp: any) => {
+    const employeeMap = employeeList.reduce((acc: any, emp: any) => {
       acc[emp.id] = emp;
       return acc;
     }, {});
     
     // Merge employees with their manager info
-    return employees.map((employee: any) => ({
+    return employeeList.map((employee: any) => ({
       ...employee,
       directManager: employee.directManagerId 
         ? employeeMap[employee.directManagerId] 
@@ -487,7 +488,7 @@ export function EmployeesTab() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="no-manager">No Manager</SelectItem>
-                          {employees
+                          {(Array.isArray(employees) ? employees : [])
                             .filter((emp: any) => emp.id !== editingEmployee?.id)
                             .map((employee: any) => (
                               <SelectItem key={employee.id} value={employee.id}>

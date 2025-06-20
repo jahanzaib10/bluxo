@@ -29,9 +29,10 @@ export function ClientsTab() {
 
   // Filter clients based on search
   const filteredClients = useMemo(() => {
-    if (!searchValue) return clients;
+    const clientList = Array.isArray(clients) ? clients : [];
+    if (!searchValue) return clientList;
     
-    return clients.filter((client: any) => {
+    return clientList.filter((client: any) => {
       const searchTerm = searchValue.toLowerCase();
       return (
         client.name?.toLowerCase().includes(searchTerm) ||
