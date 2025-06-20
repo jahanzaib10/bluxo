@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
   email: varchar("email").unique(),
   name: varchar("name"),
+  password: varchar("password"),
   profileImageUrl: varchar("profile_image_url"),
   organizationId: uuid("organization_id").references(() => organizations.id),
   role: varchar("role", { enum: ["super_admin", "admin", "manager", "client", "viewer"] }).default("viewer"),

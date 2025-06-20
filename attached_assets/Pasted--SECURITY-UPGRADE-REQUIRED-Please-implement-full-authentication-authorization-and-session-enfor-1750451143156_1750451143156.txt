@@ -1,0 +1,150 @@
+🚨 SECURITY UPGRADE REQUIRED: Please implement full authentication, authorization, and session enforcement across the entire application.
+
+My application has enterprise-level data and sensitive access flows. Right now, all pages and APIs are public — this must be corrected immediately.
+
+---
+
+### ✅ PHASE 1: GLOBAL SESSION ENFORCEMENT
+
+1. Add a **session guard/wrapper** to all frontend routes (except login/signup/client access):
+   - If session is missing or invalid → redirect to `/login`
+   - Use cookie, localStorage, or server-side token validation
+   - Handle client-side refreshes to re-validate session
+
+2. Protect all React pages:
+```tsx
+<PrivateRoute> or <ProtectedLayout>
+  {children}
+</PrivateRoute>
+Wrap:
+
+/dashboard
+
+/income
+
+/expenses
+
+/subscriptions
+
+/employees
+
+/clients
+
+/settings/*
+
+🔐 PHASE 2: ROLE-BASED PAGE ACCESS
+Restrict access by user role:
+
+Page	Access
+/settings/user-management	Only super_admin, admin
+/employees	admin, manager
+/subscriptions	admin, manager
+/categories and /payment-sources	admin or above
+/clients	Everyone except client
+/client-dashboard/:token	Only accessible via token, no login allowed
+
+Client users (type: client) must not be able to:
+
+Access /dashboard, /subscriptions, /employees
+
+View income/expenses except via their dashboard link
+
+🔐 PHASE 3: API MIDDLEWARE ENFORCEMENT
+Apply middleware to all /api/... endpoints:
+
+Validate user token/session
+
+Reject if missing or expired → 401 Unauthorized
+
+Validate organization_id matches user
+
+Apply role-based API guards:
+
+e.g. only admin+ can POST /api/users/invite
+
+Allow /api/client-dashboard/:token without session — but validate token and expiration
+
+🔒 PHASE 4: OWNER ACCOUNT PROTECTION
+jay@dartnox.com is the SaaS owner
+
+Must always be shown in user management
+
+Must NOT be deletable, demotable, or editable
+
+If logged in as this account:
+
+Show “Owner” badge
+
+Disable role/status controls
+
+🔐 PHASE 5: SECURE CLIENT DASHBOARD FLOW
+✅ Route: /client/:id
+
+Email entry → lookup client → generate magic token
+
+Send secure email link to that address
+
+Route: /client-dashboard/:token
+
+Validate token and expiration
+
+Show client-specific dashboard (read-only)
+
+No access to any org-scoped backend data outside client_id
+
+✅ Expired or forged tokens → 403/Invalid
+
+🧪 QA TEST CASES
+✅ UNAUTHENTICATED USERS:
+
+Redirected from /dashboard, /income, /clients, etc.
+
+Cannot access /api/income, /api/employees
+
+✅ ROLE ENFORCEMENT:
+
+Client users → can only view private dashboard
+
+Viewers → no edit/delete anywhere
+
+Admin → full access
+
+Owner → protected from role/edit/delete
+
+✅ SESSION PERSISTENCE:
+
+Refreshing page keeps session alive
+
+Logout clears session
+
+✅ CLIENT DASHBOARD:
+
+Token opens secure dashboard
+
+Expired → 403
+
+Permissions respected
+
+✅ UI BEHAVIOR:
+
+Sidebar hides routes by role
+
+No errors on soft navigation
+
+📘 Swagger Updates:
+
+All protected API endpoints should return:
+
+401 Unauthorized when session is missing
+
+403 Forbidden when role is insufficient
+
+🔁 DO NOT
+
+Do not affect login/signup/session creation
+
+Do not disable public routes: /login, /signup, /client/:id, /client-dashboard/:token
+
+Do not overwrite functional flows — just wrap/guard them
+
+This is a critical security step. No routes or API endpoints should remain publicly accessible unless explicitly allowed.

@@ -10,18 +10,43 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     username: string;
+    email: string;
+    role: string;
+    type: string;
+    organizationId: string;
   };
 }
 
-// Generate JWT token
-export function generateToken(payload: { id: string; username: string }): string {
+// Generate JWT token with enhanced user data
+export function generateToken(payload: { 
+  id: string; 
+  username: string; 
+  email: string; 
+  role: string; 
+  type: string; 
+  organizationId: string; 
+}): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 // Verify JWT token
-export function verifyToken(token: string): { id: string; username: string } | null {
+export function verifyToken(token: string): { 
+  id: string; 
+  username: string; 
+  email: string; 
+  role: string; 
+  type: string; 
+  organizationId: string; 
+} | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { id: string; username: string };
+    return jwt.verify(token, JWT_SECRET) as { 
+      id: string; 
+      username: string; 
+      email: string; 
+      role: string; 
+      type: string; 
+      organizationId: string; 
+    };
   } catch (error) {
     return null;
   }
@@ -38,7 +63,7 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 }
 
 // Authentication middleware
-export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
+export async function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
   // Check for token in Authorization header or cookies
   let token = req.headers.authorization?.split(' ')[1]; // Bearer token
   
@@ -55,8 +80,87 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
 
-  req.user = decoded;
+  // Get fresh user data from database to ensure current role/status
+  const user = await storage.getUser(decoded.id);
+  if (!user || user.status !== 'active') {
+    return res.status(401).json({ message: 'User account is inactive or not found' });
+  }
+
+  req.user = {
+    id: user.id,
+    username: user.name, // Use name as username for now
+    email: user.email,
+    role: user.role,
+    type: user.type,
+    organizationId: user.organizationId
+  };
+  
   next();
+}
+
+// Role-based authorization middleware
+export function requireRole(allowedRoles: string[]) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+
+    next();
+  };
+}
+
+// Admin-only middleware
+export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  if (!['super_admin', 'admin'].includes(req.user.role)) {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  next();
+}
+
+// Organization isolation middleware
+export function requireSameOrganization(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  // Allow super_admin to access any organization
+  if (req.user.role === 'super_admin') {
+    return next();
+  }
+
+  // For other users, validate organization access in route handlers
+  next();
+}
+
+// Client dashboard token middleware (separate from regular auth)
+export async function validateClientToken(req: Request, res: Response, next: NextFunction) {
+  const { token } = req.params;
+  
+  if (!token) {
+    return res.status(400).json({ message: 'Token required' });
+  }
+
+  try {
+    const client = await storage.getClientByToken(token);
+    if (!client) {
+      return res.status(403).json({ message: 'Invalid or expired token' });
+    }
+
+    // Add client info to request
+    (req as any).client = client;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Invalid token' });
+  }
 }
 
 // Login handler
