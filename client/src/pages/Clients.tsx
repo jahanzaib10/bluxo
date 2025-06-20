@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Mail, Phone, Globe, Building, User, Settings } from "lucide-react";
+import { Plus, Mail, Phone, Globe, Building, User, Settings, Eye, Calendar, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +36,7 @@ type PermissionsFormData = z.infer<typeof permissionsFormSchema>;
 export default function Clients() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [authToken, setAuthToken] = useState<string>("");
   const { toast } = useToast();
@@ -155,6 +156,11 @@ export default function Clients() {
         showInvoices: clientPermissions.showInvoices,
       });
     }
+  };
+
+  const openProfileModal = (client: Client) => {
+    setSelectedClient(client);
+    setIsProfileModalOpen(true);
   };
 
   if (isLoading) {
@@ -313,7 +319,7 @@ export default function Clients() {
 
       <div className="grid gap-6">
         {clients.map((client) => (
-          <Card key={client.id} className="hover:shadow-md transition-shadow">
+          <Card key={client.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => openProfileModal(client)}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -323,7 +329,7 @@ export default function Clients() {
                   </CardTitle>
                   <CardDescription>{client.industry}</CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <Button
                     variant="outline"
                     size="sm"
@@ -490,18 +496,30 @@ export default function Clients() {
                 <span>•</span>
                 <span>Single use only</span>
               </div>
-              <Button
-                onClick={() => {
-                  navigator.clipboard.writeText(authToken);
-                  toast({
-                    title: "Copied",
-                    description: "Token copied to clipboard",
-                  });
-                }}
-                className="w-full"
-              >
-                Copy Token
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(authToken);
+                    toast({
+                      title: "Copied",
+                      description: "Token copied to clipboard",
+                    });
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Copy Token
+                </Button>
+                <Button
+                  onClick={() => {
+                    const clientDashboardUrl = `/client-dashboard?token=${authToken}`;
+                    window.open(clientDashboardUrl, '_blank');
+                  }}
+                  className="flex-1"
+                >
+                  Open Dashboard
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
