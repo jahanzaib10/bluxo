@@ -17,23 +17,13 @@ import { queryClient } from '@/lib/queryClient';
 export default function ProfileDropdown() {
   const { user } = useAuth();
 
-  const handleLogout = async () => {
-    try {
-      // Clear authentication data
-      document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-      localStorage.removeItem('auth_token');
-      
-      // Clear all query cache to force re-authentication
-      queryClient.clear();
-      
-      // Invalidate the auth query specifically
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Force reload as fallback
-      window.location.reload();
-    }
+  const handleLogout = () => {
+    // Clear authentication data immediately
+    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+    localStorage.removeItem('auth_token');
+    
+    // Force a complete page reload to clear all state
+    window.location.href = '/login';
   };
 
   const getInitials = (name: string) => {
