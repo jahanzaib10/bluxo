@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, Search, Edit, Trash2, Badge } from "lucide-react";
+import { Plus, Upload, Search, Edit, Trash2, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge as UIBadge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -571,9 +572,18 @@ export default function Income() {
         />
       </div>
 
-      {/* Table */}
-      <div className="rounded-md border">
-        <Table>
+      {/* Income Records Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Income Records ({filteredIncome.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredIncome.length > 0 ? (
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Amount</TableHead>
@@ -652,20 +662,20 @@ export default function Income() {
                     <TableCell className="whitespace-nowrap">{record.clientName || 'N/A'}</TableCell>
                     <TableCell className="whitespace-nowrap">{record.categoryName || 'N/A'}</TableCell>
                     <TableCell className="whitespace-nowrap">
-                      <UIBadge variant={
+                      <Badge variant={
                         record.status === 'paid' ? 'default' : 
                         record.status === 'pending' ? 'secondary' : 
                         'destructive'
                       }>
                         {record.status || 'paid'}
-                      </UIBadge>
+                      </Badge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{record.invoiceId || '—'}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       {record.isRecurring ? (
-                        <UIBadge variant={isRecurringActive ? "default" : "outline"}>
+                        <Badge variant={isRecurringActive ? "default" : "outline"}>
                           {record.recurringFrequency || 'recurring'}
-                        </UIBadge>
+                        </Badge>
                       ) : '—'}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
@@ -698,7 +708,14 @@ export default function Income() {
             )}
           </TableBody>
         </Table>
-      </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No income records found
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
