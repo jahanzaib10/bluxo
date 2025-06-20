@@ -215,6 +215,14 @@ Changelog:
   * Enhanced sidebar logout functionality with proper authentication cleanup and redirect handling
   * Verified Categories and Payment Sources tabs maintain full CRUD functionality with modern UI
   * Completed end-to-end settings navigation with working tab switching and logout flow
+- June 20, 2025. Critical organization isolation security fixes implemented
+  * Removed all hardcoded user data causing cross-organization visibility issues
+  * Fixed React Query infinite loop with proper query key management (removed Date.now() timestamp approach)
+  * Updated utah@dartnox.com to proper account owner with super_admin role and fresh password hash
+  * Confirmed backend organization filtering returns only organization-specific users
+  * Verified frontend properly receives and displays organization-isolated user data
+  * Enhanced authentication system with proper password verification using bcryptjs
+  * Completed comprehensive testing confirming organization isolation works correctly
 ```
 
 ## User Preferences
