@@ -388,8 +388,6 @@ export type Expense = typeof expenses.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 
 // Insert types for forms
-export type InsertSubscription = typeof subscriptions.$inferInsert;
-
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type InsertClientPermissions = z.infer<typeof insertClientPermissionsSchema>;

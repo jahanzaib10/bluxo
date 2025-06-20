@@ -1473,6 +1473,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Subscription routes
+  app.get("/api/subscriptions", mockAuth, async (req: any, res) => {
+    try {
+      const subscriptionRecords = await storage.getSubscriptions();
+      const clientsData = await storage.getClients();
+      const employeesData = await storage.getEmployees();
+      const categoriesData = await storage.getCategories();
+      const paymentSourcesData = await storage.getPaymentSources();
+
+      const enrichedSubscriptions = subscriptionRecords.map(record => ({
+        ...record,
+        clientName: record.clientId ? clientsData.find(c => c.id === record.clientId)?.name || 'Unknown' : null,
+        employeeName: record.employeeId ? employeesData.find(e => e.id === record.employeeId)?.fullName || 'Unknown' : null,
+        categoryName: record.categoryId ? categoriesData.find(c => c.id === record.categoryId)?.name || 'Unknown' : null,
+        paymentSourceName: record.paymentSourceId ? paymentSourcesData.find(p => p.id === record.paymentSourceId)?.name || 'Unknown' : null
+      }));
+
+      res.json(enrichedSubscriptions);
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+      res.status(500).json({ message: "Failed to fetch subscriptions" });
+    }
+  });
+
+  app.post("/api/subscriptions", mockAuth, async (req: any, res) => {
+    try {
+      const validatedData = insertSubscriptionSchema.parse(req.body);
+      const subscriptionData = {
+        ...validatedData,
+        organizationId: req.user.organizationId
+      };
+      const newSubscription = await storage.createSubscription(subscriptionData);
+      res.status(201).json(newSubscription);
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+      res.status(500).json({ message: "Failed to create subscription" });
+    }
+  });
+
+  app.put("/api/subscriptions/:id", mockAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertSubscriptionSchema.partial().parse(req.body);
+      const updatedSubscription = await storage.updateSubscription(id, validatedData);
+      if (!updatedSubscription) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      res.json(updatedSubscription);
+    } catch (error) {
+      console.error("Error updating subscription:", error);
+      res.status(500).json({ message: "Failed to update subscription" });
+    }
+  });
+
+  app.delete("/api/subscriptions/:id", mockAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteSubscription(id);
+      
+      if (success) {
+        res.json({ message: "Subscription deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Subscription not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting subscription:", error);
+      res.status(500).json({ message: "Failed to delete subscription" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

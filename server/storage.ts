@@ -7,6 +7,7 @@ import {
   paymentSources,
   income,
   expenses,
+  subscriptions,
   users,
   type Category, 
   type InsertCategory,
@@ -23,6 +24,8 @@ import {
   type InsertIncome,
   type Expense,
   type InsertExpense,
+  type Subscription,
+  type InsertSubscription,
   type User, 
   type UpsertUser 
 } from "@shared/schema";
@@ -86,6 +89,13 @@ export interface IStorage {
   createExpense(expense: InsertExpense): Promise<Expense>;
   updateExpense(id: string, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
   deleteExpense(id: string): Promise<boolean>;
+
+  // Subscription methods
+  getSubscriptions(): Promise<Subscription[]>;
+  getSubscriptionById(id: string): Promise<Subscription | undefined>;
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  updateSubscription(id: string, subscription: Partial<InsertSubscription>): Promise<Subscription | undefined>;
+  deleteSubscription(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -378,6 +388,38 @@ export class DatabaseStorage implements IStorage {
 
   async deleteExpense(id: string): Promise<boolean> {
     const result = await db.delete(expenses).where(eq(expenses.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // Subscription operations
+  async getSubscriptions(): Promise<Subscription[]> {
+    return await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt));
+  }
+
+  async getSubscriptionById(id: string): Promise<Subscription | undefined> {
+    const [subscription] = await db.select().from(subscriptions).where(eq(subscriptions.id, id));
+    return subscription;
+  }
+
+  async createSubscription(subscriptionData: InsertSubscription): Promise<Subscription> {
+    const [newSubscription] = await db
+      .insert(subscriptions)
+      .values(subscriptionData)
+      .returning();
+    return newSubscription;
+  }
+
+  async updateSubscription(id: string, subscriptionData: Partial<InsertSubscription>): Promise<Subscription | undefined> {
+    const [updatedSubscription] = await db
+      .update(subscriptions)
+      .set(subscriptionData)
+      .where(eq(subscriptions.id, id))
+      .returning();
+    return updatedSubscription;
+  }
+
+  async deleteSubscription(id: string): Promise<boolean> {
+    const result = await db.delete(subscriptions).where(eq(subscriptions.id, id));
     return result.rowCount! > 0;
   }
 }
