@@ -14,7 +14,7 @@ import { randomUUID } from "crypto";
 
 // Mock auth middleware for now
 function mockAuth(req: any, res: any, next: any) {
-  req.user = { organizationId: "test-org-id" };
+  req.user = { organizationId: "2723d846-8be7-4d00-9892-ea199b74d73d" };
   next();
 }
 
