@@ -1,0 +1,50 @@
+🔐 ✅ Comprehensive Security QA Checklist
+🔐 1. UNAUTHENTICATED USER TESTS
+Test	Action	Expected Result
+🔒 Access /dashboard as guest	Visit directly in new browser	🔁 Redirect to /login
+🔒 API access unauthenticated	Call /api/income from Postman	❌ 401 Unauthorized
+🔒 Access /settings/user-management as guest	Direct URL visit	🔁 Redirect to /login
+
+👥 2. ROLE SIMULATION TESTS
+Role	Page	Expected Access
+🔐 super_admin	All routes (/dashboard, /settings/user-management, /subscriptions, etc.)	✅ Full access
+👤 admin	/dashboard, /income, /employees	✅ Access
+✖️ user-management	❌ Hidden or unauthorized	
+👤 manager	/dashboard, /income, /subscriptions	✅ Limited access
+✖️ /employees	❌ If restricted	
+👤 viewer	/dashboard only	✅ Read-only
+✖️ No edit/delete buttons	✅ UI elements hidden	
+👤 client	/client-dashboard/:token only	✅ Can only access via email + token
+✖️ /dashboard, /income, /subscriptions	❌ Forbidden	
+
+🧭 3. FRONTEND NAVIGATION CHECKS
+Test	Expected Behavior
+👀 Sidebar items filtered by role	Clients can’t see internal pages
+✏️ No edit buttons for viewer	Viewer sees only read-only components
+🔐 Logout clears session	Visiting /dashboard after logout → 🔁 redirects to login
+
+📬 4. CLIENT TOKEN FLOW SECURITY
+Test	Action	Result
+🔑 Valid token access	Open /client-dashboard/:token within 10 mins	✅ View dashboard
+⏰ Expired token	Open link after expiry	❌ "Token expired" screen
+🧪 Tampered token	Change token characters	❌ "Invalid link" screen
+📧 Wrong email match	Try email that doesn't exist	❌ Blocked (403 or not found)
+🔐 Tokened access bypasses login	No session required for /client-dashboard/:token	✅ Allowed
+
+🔁 5. ORGANIZATION ISOLATION TESTS
+Test	Action	Result
+🔐 Admin A logs in from Org X	Views /clients, /income	✅ Sees only Org X data
+🔁 Switch to Org Y	✅ Data is different	
+🔐 API request forged with wrong org_id	Try POST /api/income with different org_id	❌ 403 Forbidden
+
+🧪 BONUS: SESSION STORAGE & AUTO-REFRESH
+Test	Action	Result
+💾 Refresh /dashboard	Session persists	✅ Still logged in
+🗑 Clear cookies	Visit /dashboard	🔁 Redirected to /login
+
+✅ What to Report to Replit (if issues found)
+Problem	What to Ask
+🚫 No role check on page	“Please wrap route in a role guard component”
+🚫 Client can access internal pages	“Block access to /dashboard for client role”
+🚫 Token doesn't expire	“Please add expiry check on /client-dashboard/:token”
+🚫 Data from other org visible	“Please validate organization_id server-side for all queries”
