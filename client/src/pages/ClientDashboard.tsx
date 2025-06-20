@@ -239,7 +239,7 @@ export default function ClientDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Category Breakdown */}
-          {data.permissions.showCategoryBreakdown && (
+          {clientData.permissions.showCategoryBreakdown && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -251,12 +251,12 @@ export default function ClientDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {data.dashboard.categoryBreakdown.length > 0 ? (
+                {clientData.dashboard.categoryBreakdown.length > 0 ? (
                   <div className="space-y-4">
                     <ResponsiveContainer width="100%" height={250}>
                       <PieChart>
                         <Pie
-                          data={data.dashboard.categoryBreakdown}
+                          data={clientData.dashboard.categoryBreakdown}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
@@ -265,7 +265,7 @@ export default function ClientDashboard() {
                           fill="#8884d8"
                           dataKey="amount"
                         >
-                          {data.dashboard.categoryBreakdown.map((entry, index) => (
+                          {clientData.dashboard.categoryBreakdown.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -273,7 +273,7 @@ export default function ClientDashboard() {
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="space-y-2">
-                      {data.dashboard.categoryBreakdown.map((category, index) => (
+                      {clientData.dashboard.categoryBreakdown.map((category, index) => (
                         <div key={category.name} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div 
@@ -297,7 +297,7 @@ export default function ClientDashboard() {
           )}
 
           {/* Recent Transactions */}
-          {data.permissions.showPaymentHistory && (
+          {clientData.permissions.showPaymentHistory && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -309,9 +309,9 @@ export default function ClientDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {data.dashboard.recentTransactions.length > 0 ? (
+                {clientData.dashboard.recentTransactions.length > 0 ? (
                   <div className="space-y-4">
-                    {data.dashboard.recentTransactions.map((transaction) => (
+                    {clientData.dashboard.recentTransactions.map((transaction) => (
                       <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="space-y-1">
                           <p className="text-sm font-medium">{transaction.description}</p>
@@ -341,7 +341,7 @@ export default function ClientDashboard() {
           )}
 
           {/* Restricted Sections */}
-          {!data.permissions.showCategoryBreakdown && !data.permissions.showPaymentHistory && (
+          {!clientData.permissions.showCategoryBreakdown && !clientData.permissions.showPaymentHistory && (
             <Card className="lg:col-span-2">
               <CardContent className="flex items-center justify-center py-12">
                 <div className="text-center space-y-2">
@@ -357,7 +357,7 @@ export default function ClientDashboard() {
         </div>
 
         {/* Invoices Section (if enabled) */}
-        {data.permissions.showInvoices && (
+        {clientData.permissions.showInvoices && (
           <Card className="mt-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
