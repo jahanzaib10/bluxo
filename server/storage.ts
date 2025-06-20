@@ -224,7 +224,8 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(clients, eq(clientAuthTokens.clientId, clients.id))
       .where(eq(clientAuthTokens.token, token));
 
-    if (!authToken || authToken.token.used || authToken.token.expiresAt < new Date()) {
+    // Only check expiration, allow reuse of tokens within their validity period
+    if (!authToken || authToken.token.expiresAt < new Date()) {
       return undefined;
     }
 
