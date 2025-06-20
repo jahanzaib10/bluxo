@@ -121,8 +121,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Employees endpoints
-  app.get("/api/employees", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+  // Employees endpoints (admin only)
+  app.get("/api/employees", authenticateToken, requireRole(['super_admin', 'admin']), requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const result = await db
@@ -138,7 +138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/employees", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+  app.post("/api/employees", authenticateToken, requireRole(['super_admin', 'admin']), requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { name, email, position, country, startDate, endDate, status } = req.body;
@@ -1597,7 +1597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Management API Routes
-  app.get("/api/users", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+  app.get("/api/users", authenticateToken, requireRole(['super_admin', 'admin']), requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       console.log(`[DEBUG] Fetching users for organization: ${organizationId}, requested by user: ${req.user.email}`);
