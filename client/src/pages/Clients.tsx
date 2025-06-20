@@ -1,34 +1,38 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Mail, Phone, Globe, Building, User, Settings, Eye, Calendar, DollarSign, Trash2, Upload, Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { apiRequest } from "@/lib/queryClient";
-import { insertClientSchema, insertClientPermissionsSchema, type Client, type ClientPermissions } from "@shared/schema";
 import { z } from "zod";
+import { Plus, Edit, Trash2, Eye, Settings, Mail, Phone, Globe, MapPin, Building, User, Calendar, DollarSign, Key, Upload, Download, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { Client, InsertClient, ClientPermissions, InsertClientPermissions } from "@shared/schema";
 
-const clientFormSchema = insertClientSchema.extend({
+const clientFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  email: z.string().email("Valid email is required"),
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().optional(),
+  website: z.string().optional(),
+  address: z.string().optional(),
+  industry: z.string().optional(),
+  contactName: z.string().optional(),
+  contactEmail: z.string().email().optional().or(z.literal("")),
 });
 
-const permissionsFormSchema = insertClientPermissionsSchema.omit({
-  id: true,
-  clientId: true,
-  organizationId: true,
-  createdAt: true,
-  updatedAt: true,
+const permissionsFormSchema = z.object({
+  showIncomeGraph: z.boolean().default(true),
+  showCategoryBreakdown: z.boolean().default(true),
+  showPaymentHistory: z.boolean().default(true),
+  showInvoices: z.boolean().default(false),
 });
 
 type ClientFormData = z.infer<typeof clientFormSchema>;
@@ -36,17 +40,17 @@ type PermissionsFormData = z.infer<typeof permissionsFormSchema>;
 
 export default function Clients() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [authToken, setAuthToken] = useState<string>("");
+  const [authToken, setAuthToken] = useState("");
+  const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
-  const [csvPreview, setCsvPreview] = useState<any[]>([]);
-  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -54,89 +58,7 @@ export default function Clients() {
     queryKey: ["/api/clients"],
   });
 
-  const { data: clientPermissions } = useQuery<ClientPermissions>({
-    queryKey: ["/api/client-permissions", selectedClient?.id],
-    enabled: !!selectedClient?.id,
-  });
-
-  const addClientMutation = useMutation({
-    mutationFn: (data: ClientFormData) => apiRequest("/api/clients", "POST", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      setIsAddModalOpen(false);
-      toast({
-        title: "Success",
-        description: "Client added successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updatePermissionsMutation = useMutation({
-    mutationFn: (data: PermissionsFormData) => 
-      apiRequest(`/api/client-permissions/${selectedClient?.id}`, "PUT", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/client-permissions", selectedClient?.id] });
-      setIsPermissionsModalOpen(false);
-      toast({
-        title: "Success",
-        description: "Client permissions updated successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const generateAuthTokenMutation = useMutation({
-    mutationFn: (email: string) => apiRequest("/api/client-auth/request", "POST", { email }),
-    onSuccess: (data) => {
-      setAuthToken(data.token);
-      toast({
-        title: "Success",
-        description: "Authentication token generated successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteClientMutation = useMutation({
-    mutationFn: (clientId: string) => apiRequest(`/api/clients/${clientId}`, "DELETE"),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      setIsDeleteModalOpen(false);
-      setSelectedClient(null);
-      toast({
-        title: "Success",
-        description: "Client deleted successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const clientForm = useForm<ClientFormData>({
+  const form = useForm<ClientFormData>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: {
       name: "",
@@ -160,8 +82,140 @@ export default function Clients() {
     },
   });
 
+  const addClientMutation = useMutation({
+    mutationFn: (data: ClientFormData) => apiRequest("/api/clients", "POST", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setIsAddModalOpen(false);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Client added successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateClientMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<ClientFormData> }) =>
+      apiRequest(`/api/clients/${id}`, "PUT", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setIsEditModalOpen(false);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Client updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteClientMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/clients/${id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setIsDeleteModalOpen(false);
+      setSelectedClient(null);
+      toast({
+        title: "Success",
+        description: "Client deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePermissionsMutation = useMutation({
+    mutationFn: (data: PermissionsFormData) => 
+      apiRequest(`/api/clients/${selectedClient?.id}/permissions`, "PUT", data),
+    onSuccess: () => {
+      setIsPermissionsModalOpen(false);
+      toast({
+        title: "Success",
+        description: "Permissions updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const generateAuthTokenMutation = useMutation({
+    mutationFn: (clientId: string) => apiRequest(`/api/clients/${clientId}/auth-token`, "POST"),
+    onSuccess: (response: any) => {
+      setAuthToken(response.token);
+      toast({
+        title: "Success",
+        description: "Access token generated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const importClientsMutation = useMutation({
+    mutationFn: (data: { clients: any[] }) => apiRequest("/api/clients/import", "POST", data),
+    onSuccess: (response: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setIsImportOpen(false);
+      setCsvFile(null);
+      setCsvData([]);
+      setImportErrors([]);
+      toast({
+        title: "Success",
+        description: response.message,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddClient = (data: ClientFormData) => {
     addClientMutation.mutate(data);
+  };
+
+  const handleEditClient = (data: ClientFormData) => {
+    if (selectedClient) {
+      updateClientMutation.mutate({ id: selectedClient.id, data });
+    }
+  };
+
+  const handleDeleteClient = () => {
+    if (selectedClient) {
+      deleteClientMutation.mutate(selectedClient.id);
+    }
   };
 
   const handleUpdatePermissions = (data: PermissionsFormData) => {
@@ -169,21 +223,27 @@ export default function Clients() {
   };
 
   const handleGenerateAuthToken = (client: Client) => {
-    generateAuthTokenMutation.mutate(client.email);
+    generateAuthTokenMutation.mutate(client.id);
+  };
+
+  const openEditModal = (client: Client) => {
+    setSelectedClient(client);
+    form.reset({
+      name: client.name,
+      email: client.email || "",
+      phone: client.phone || "",
+      website: client.website || "",
+      address: client.address || "",
+      industry: client.industry || "",
+      contactName: client.contactName || "",
+      contactEmail: client.contactEmail || "",
+    });
+    setIsEditModalOpen(true);
   };
 
   const openPermissionsModal = (client: Client) => {
     setSelectedClient(client);
     setIsPermissionsModalOpen(true);
-    // Reset form with current permissions
-    if (clientPermissions) {
-      permissionsForm.reset({
-        showIncomeGraph: clientPermissions.showIncomeGraph,
-        showCategoryBreakdown: clientPermissions.showCategoryBreakdown,
-        showPaymentHistory: clientPermissions.showPaymentHistory,
-        showInvoices: clientPermissions.showInvoices,
-      });
-    }
   };
 
   const openProfileModal = (client: Client) => {
@@ -196,145 +256,80 @@ export default function Clients() {
     setIsDeleteModalOpen(true);
   };
 
-  const importMutation = useMutation({
-    mutationFn: async (clientData: any[]) => {
-      return await apiRequest("/api/clients/import", "POST", { clients: clientData });
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      toast({ title: `Successfully imported ${variables.length} clients` });
-      setIsImportOpen(false);
-      setCsvData([]);
-      setCsvPreview([]);
-      setShowPreview(false);
-    },
-    onError: () => {
-      toast({ title: "Failed to import clients", variant: "destructive" });
-    },
-  });
-
-  const parseCSVLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    
-    result.push(current.trim());
-    return result;
-  };
-
-  const parseCSV = (csvText: string) => {
-    const lines = csvText.split('\n').filter(line => line.trim());
-    if (lines.length === 0) return { headers: [], data: [] };
-    
-    const headers = parseCSVLine(lines[0]);
-    const data: any[] = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
-      const row: any = {};
-      
-      headers.forEach((header, index) => {
-        const normalizedHeader = header.toLowerCase().replace(/[^a-z]/g, '');
-        let fieldName = '';
-        
-        // Map CSV headers to expected field names
-        switch (normalizedHeader) {
-          case 'name':
-            fieldName = 'name';
-            break;
-          case 'email':
-            fieldName = 'email';
-            break;
-          case 'phone':
-            fieldName = 'phone';
-            break;
-          case 'website':
-            fieldName = 'website';
-            break;
-          case 'address':
-            fieldName = 'address';
-            break;
-          case 'industry':
-            fieldName = 'industry';
-            break;
-          case 'contactname':
-            fieldName = 'contactName';
-            break;
-          case 'contactemail':
-            fieldName = 'contactEmail';
-            break;
-          default:
-            fieldName = header;
-        }
-        
-        row[fieldName] = values[index] || '';
-      });
-      
-      // Only add rows with required name field
-      if (row.name && row.name.trim()) {
-        data.push(row);
-      }
-    }
-    
-    return { headers, data };
+  const downloadTemplate = () => {
+    const headers = ["name", "email", "phone", "website", "address", "industry", "contact_name", "contact_email"];
+    const csvContent = headers.join(",") + "\n";
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "clients_template.csv";
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setCsvFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const csvText = e.target?.result as string;
-      const { headers, data } = parseCSV(csvText);
+      const text = e.target?.result as string;
+      const lines = text.split("\n").filter(line => line.trim());
       
+      if (lines.length < 2) {
+        toast({
+          title: "Error",
+          description: "CSV file must contain at least a header row and one data row",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
+      const data = lines.slice(1).map(line => {
+        const values = line.split(",").map(v => v.trim().replace(/"/g, ""));
+        const row: any = {};
+        headers.forEach((header, index) => {
+          const normalizedHeader = header.toLowerCase().replace(/\s+/g, "");
+          let fieldName = normalizedHeader;
+          
+          // Map CSV headers to expected field names
+          if (normalizedHeader === "contactname" || normalizedHeader === "contact_name") fieldName = "contactName";
+          if (normalizedHeader === "contactemail" || normalizedHeader === "contact_email") fieldName = "contactEmail";
+          
+          row[fieldName] = values[index] || "";
+        });
+        return row;
+      });
+
       setCsvData(data);
-      setCsvPreview(data.slice(0, 10)); // Show first 10 rows for preview
-      setCsvHeaders(headers);
-      setShowPreview(true);
     };
     reader.readAsText(file);
   };
 
-  const downloadTemplate = () => {
-    const template = "name,email,phone,website,address,industry,contact_name,contact_email\nTechCorp Solutions,admin@techcorp.com,+1-555-0123,https://techcorp.com,123 Tech Street,Technology,John Smith,john@techcorp.com\nDigital Marketing Pro,info@digitalmarketing.com,+1-555-0456,https://digitalmarketing.com,456 Marketing Ave,Marketing,Jane Doe,jane@digitalmarketing.com\nGreen Energy Co,contact@greenenergy.com,+1-555-0789,https://greenenergy.com,789 Energy Blvd,Energy,Bob Johnson,bob@greenenergy.com";
-    const blob = new Blob([template], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'clients_template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
   const handleImport = () => {
-    importMutation.mutate(csvData);
-  };
-
-  const handleDeleteClient = () => {
-    if (selectedClient) {
-      deleteClientMutation.mutate(selectedClient.id);
+    if (csvData.length === 0) {
+      toast({
+        title: "Error",
+        description: "No data to import",
+        variant: "destructive",
+      });
+      return;
     }
+
+    importClientsMutation.mutate({ clients: csvData });
   };
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading clients...</div>
+      <div className="p-6 space-y-6">
+        <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-48 bg-gray-200 rounded animate-pulse"></div>
+          ))}
         </div>
       </div>
     );
@@ -355,319 +350,438 @@ export default function Clients() {
                 Import CSV
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby="csv-import-description">
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Import Clients from CSV</DialogTitle>
-                <div id="csv-import-description" className="text-sm text-gray-600">
+                <DialogDescription>
                   Upload a CSV file to import client data. Preview and verify the data before importing.
-                </div>
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={downloadTemplate}
-                  >
+                  <Button variant="outline" onClick={downloadTemplate}>
                     <Download className="h-4 w-4 mr-2" />
                     Download Template
                   </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Choose CSV File
-                  </Button>
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileUpload}
+                      className="cursor-pointer"
+                    />
+                  </div>
                 </div>
-                
-                {showPreview && csvPreview.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Preview ({csvData.length} total records)</h3>
-                    <div className="text-xs text-gray-600 mb-2">
-                      CSV Headers: {csvHeaders.join(", ")}
+
+                {csvData.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Preview ({csvData.length} records)</h3>
+                      <Button onClick={handleImport} disabled={importClientsMutation.isPending}>
+                        {importClientsMutation.isPending ? "Importing..." : "Import Clients"}
+                      </Button>
                     </div>
-                    <div className="border rounded-lg overflow-x-auto">
-                      <Table className="min-w-max">
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>Website</TableHead>
-                            <TableHead>Address</TableHead>
-                            <TableHead>Industry</TableHead>
-                            <TableHead>Contact Name</TableHead>
-                            <TableHead>Contact Email</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {csvPreview.map((row, index) => (
-                            <TableRow key={index}>
-                              <TableCell className="whitespace-nowrap">{row.name || "—"}</TableCell>
-                              <TableCell className="whitespace-nowrap">{row.email || "—"}</TableCell>
-                              <TableCell className="whitespace-nowrap">{row.phone || "—"}</TableCell>
-                              <TableCell className="whitespace-nowrap">{row.website || "—"}</TableCell>
-                              <TableCell className="whitespace-nowrap">{row.address || "—"}</TableCell>
-                              <TableCell className="whitespace-nowrap">{row.industry || "—"}</TableCell>
-                              <TableCell className="whitespace-nowrap">{row.contactName || "—"}</TableCell>
-                              <TableCell className="whitespace-nowrap">{row.contactEmail || "—"}</TableCell>
-                            </TableRow>
+                    
+                    <div className="border rounded-lg overflow-x-auto max-h-96">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 dark:bg-gray-800">
+                          <tr>
+                            <th className="p-2 text-left">Name</th>
+                            <th className="p-2 text-left">Email</th>
+                            <th className="p-2 text-left">Phone</th>
+                            <th className="p-2 text-left">Website</th>
+                            <th className="p-2 text-left">Industry</th>
+                            <th className="p-2 text-left">Contact Name</th>
+                            <th className="p-2 text-left">Contact Email</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {csvData.slice(0, 10).map((row, index) => (
+                            <tr key={index} className="border-t">
+                              <td className="p-2">{row.name || "-"}</td>
+                              <td className="p-2">{row.email || "-"}</td>
+                              <td className="p-2">{row.phone || "-"}</td>
+                              <td className="p-2">{row.website || "-"}</td>
+                              <td className="p-2">{row.industry || "-"}</td>
+                              <td className="p-2">{row.contactName || "-"}</td>
+                              <td className="p-2">{row.contactEmail || "-"}</td>
+                            </tr>
                           ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-4">
-                      <Button variant="outline" onClick={() => {setCsvData([]); setCsvPreview([]); setShowPreview(false);}}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleImport} disabled={importMutation.isPending}>
-                        {importMutation.isPending ? "Importing..." : `Import ${csvData.length} Clients`}
-                      </Button>
+                        </tbody>
+                      </table>
+                      {csvData.length > 10 && (
+                        <div className="p-2 text-center text-sm text-muted-foreground bg-gray-50 dark:bg-gray-800">
+                          ... and {csvData.length - 10} more records
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
             </DialogContent>
           </Dialog>
-          
+
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="h-4 w-4 mr-2" />
                 Add Client
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Client</DialogTitle>
-            </DialogHeader>
-            <Form {...clientForm}>
-              <form onSubmit={clientForm.handleSubmit(handleAddClient)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Client</DialogTitle>
+                <DialogDescription>
+                  Create a new client record and set up their dashboard access.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleAddClient)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Name *</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Website</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <FormField
-                    control={clientForm.control}
-                    name="name"
+                    control={form.control}
+                    name="address"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Company Name</FormLabel>
+                        <FormLabel>Address</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter company name" {...field} />
+                          <Textarea {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   <FormField
-                    control={clientForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="Enter email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={clientForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter phone number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={clientForm.control}
-                    name="website"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Website</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter website URL" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={clientForm.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={clientForm.control}
+                    control={form.control}
                     name="industry"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Industry</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter industry" {...field} />
+                          <Input {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={clientForm.control}
-                    name="contactName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter contact name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={clientForm.control}
-                  name="contactEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="Enter contact email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={addClientMutation.isPending}>
-                    {addClientMutation.isPending ? "Adding..." : "Add Client"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="contactName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contactEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={addClientMutation.isPending}>
+                      {addClientMutation.isPending ? "Adding..." : "Add Client"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="grid gap-6">
+      {/* Clients Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {clients.map((client) => (
-          <Card key={client.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => openProfileModal(client)}>
-            <CardHeader>
+          <Card key={client.id} className="hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building className="h-5 w-5" />
-                    {client.name}
-                  </CardTitle>
-                  <CardDescription>{client.industry}</CardDescription>
-                </div>
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <CardTitle className="text-lg">{client.name}</CardTitle>
+                <div className="flex gap-1">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={() => openPermissionsModal(client)}
+                    onClick={() => openProfileModal(client)}
                   >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Permissions
+                    <Eye className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={() => handleGenerateAuthToken(client)}
-                    disabled={generateAuthTokenMutation.isPending}
+                    onClick={() => openEditModal(client)}
                   >
-                    <User className="mr-2 h-4 w-4" />
-                    {generateAuthTokenMutation.isPending ? "Generating..." : "Generate Access"}
+                    <Edit className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => openDeleteModal(client)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{client.email}</span>
-                </div>
-                {client.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{client.phone}</span>
-                  </div>
-                )}
-                {client.website && (
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{client.website}</span>
-                  </div>
-                )}
-                {client.contactName && (
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{client.contactName}</span>
-                  </div>
-                )}
-              </div>
-              {client.address && (
-                <div className="mt-3 pt-3 border-t">
-                  <p className="text-sm text-muted-foreground">{client.address}</p>
+            <CardContent className="space-y-2">
+              {client.email && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-3 w-3 text-muted-foreground" />
+                  <span className="truncate">{client.email}</span>
                 </div>
               )}
+              {client.phone && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="h-3 w-3 text-muted-foreground" />
+                  <span>{client.phone}</span>
+                </div>
+              )}
+              {client.industry && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Building className="h-3 w-3 text-muted-foreground" />
+                  <span>{client.industry}</span>
+                </div>
+              )}
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleGenerateAuthToken(client)}
+                  disabled={generateAuthTokenMutation.isPending}
+                  className="w-full"
+                >
+                  <Key className="h-3 w-3 mr-2" />
+                  Generate Access Token
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {/* Edit Client Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Client</DialogTitle>
+            <DialogDescription>
+              Update client information and settings.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleEditClient)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="industry"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Industry</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="contactName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="contactEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateClientMutation.isPending}>
+                  {updateClientMutation.isPending ? "Updating..." : "Update Client"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
       {/* Permissions Modal */}
       <Dialog open={isPermissionsModalOpen} onOpenChange={setIsPermissionsModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Client Dashboard Permissions</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Configure what {selectedClient?.name} can see in their dashboard
-            </p>
+            <DialogTitle>Configure Client Permissions</DialogTitle>
+            <DialogDescription>
+              Set what information this client can view in their dashboard.
+            </DialogDescription>
           </DialogHeader>
           <Form {...permissionsForm}>
-            <form onSubmit={permissionsForm.handleSubmit(handleUpdatePermissions)} className="space-y-4">
+            <form onSubmit={permissionsForm.handleSubmit(handleUpdatePermissions)} className="space-y-6">
               <FormField
                 control={permissionsForm.control}
                 name="showIncomeGraph"
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <FormLabel>Income Graph</FormLabel>
+                      <FormLabel>Income Overview</FormLabel>
                       <div className="text-sm text-muted-foreground">
                         Show revenue trends and income analytics
                       </div>
@@ -686,7 +800,7 @@ export default function Clients() {
                     <div className="space-y-0.5">
                       <FormLabel>Category Breakdown</FormLabel>
                       <div className="text-sm text-muted-foreground">
-                        Show spending by category analysis
+                        Show spending breakdown by categories
                       </div>
                     </div>
                     <FormControl>
@@ -748,25 +862,20 @@ export default function Clients() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Client Access Token</DialogTitle>
-              <p className="text-sm text-muted-foreground">
-                Share this token with your client to access their dashboard
-              </p>
+              <DialogDescription>
+                Share this secure token with your client to access their dashboard.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <p className="text-sm font-mono break-all">{authToken}</p>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Badge variant="outline">Expires in 10 minutes</Badge>
-                <span>•</span>
-                <span>Single use only</span>
               </div>
               <div className="flex gap-2">
                 <Button
                   onClick={() => {
                     navigator.clipboard.writeText(authToken);
                     toast({
-                      title: "Copied",
+                      title: "Success",
                       description: "Token copied to clipboard",
                     });
                   }}
@@ -792,36 +901,37 @@ export default function Clients() {
 
       {/* Client Profile Modal */}
       <Dialog open={isProfileModalOpen} onOpenChange={setIsProfileModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Building className="h-5 w-5" />
-              {selectedClient?.name} - Client Profile
+              {selectedClient?.name}
             </DialogTitle>
             <DialogDescription>
-              Detailed insights and financial data for this client
+              Detailed client information and dashboard access controls.
             </DialogDescription>
           </DialogHeader>
-          
           {selectedClient && (
             <div className="space-y-6">
-              {/* Client Details */}
+              {/* Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Company Information</CardTitle>
+                    <CardTitle className="text-lg">Company Details</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center gap-2">
                       <Building className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Industry:</span>
-                      <span>{selectedClient.industry || "Not specified"}</span>
+                      <span className="font-medium">Name:</span>
+                      <span>{selectedClient.name}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Email:</span>
-                      <span>{selectedClient.email}</span>
-                    </div>
+                    {selectedClient.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Email:</span>
+                        <span>{selectedClient.email}</span>
+                      </div>
+                    )}
                     {selectedClient.phone && (
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground" />
@@ -837,9 +947,17 @@ export default function Clients() {
                       </div>
                     )}
                     {selectedClient.address && (
-                      <div className="pt-2 border-t">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">Address:</span>
-                        <p className="text-sm text-muted-foreground mt-1">{selectedClient.address}</p>
+                        <span>{selectedClient.address}</span>
+                      </div>
+                    )}
+                    {selectedClient.industry && (
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Industry:</span>
+                        <span>{selectedClient.industry}</span>
                       </div>
                     )}
                   </CardContent>
@@ -949,20 +1067,15 @@ export default function Clients() {
           </DialogHeader>
           {selectedClient && (
             <div className="space-y-4">
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <h3 className="font-medium text-red-800">You are about to delete:</h3>
-                <p className="text-red-700 mt-1">
-                  <strong>{selectedClient.name}</strong>
-                  {selectedClient.email && ` (${selectedClient.email})`}
+              <div className="p-4 bg-red-50 dark:bg-red-950 rounded-lg">
+                <p className="text-sm">
+                  <strong>Client:</strong> {selectedClient.name}
                 </p>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                <p>This will also remove:</p>
-                <ul className="list-disc list-inside mt-1 space-y-1">
-                  <li>All client permissions and access tokens</li>
-                  <li>All income records linked to this client</li>
-                  <li>All financial data associated with this client</li>
-                </ul>
+                {selectedClient.email && (
+                  <p className="text-sm">
+                    <strong>Email:</strong> {selectedClient.email}
+                  </p>
+                )}
               </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
@@ -981,7 +1094,6 @@ export default function Clients() {
           )}
         </DialogContent>
       </Dialog>
-      </div>
     </div>
   );
 }

@@ -483,6 +483,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client CSV Import endpoint
+  app.post("/api/clients/import", mockAuth, async (req: any, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      const { clients: clientData } = req.body;
+      
+      if (!Array.isArray(clientData) || clientData.length === 0) {
+        return res.status(400).json({ 
+          message: "Invalid client data",
+          details: "Expected an array of client records"
+        });
+      }
+      
+      const processedClients = [];
+      const errors = [];
+      
+      for (let i = 0; i < clientData.length; i++) {
+        const rawRow = clientData[i];
+        
+        // Validate required fields
+        const name = rawRow.name?.toString().trim();
+        
+        if (!name) {
+          errors.push(`Row ${i + 1}: Missing required field 'name'`);
+          continue;
+        }
+        
+        // Check for duplicates by name + email combination
+        const email = rawRow.email?.toString().trim() || "";
+        const existingClient = await storage.getClientByEmail(email);
+        
+        if (existingClient && existingClient.name.toLowerCase() === name.toLowerCase()) {
+          errors.push(`Row ${i + 1}: Client '${name}' with email '${email}' already exists`);
+          continue;
+        }
+        
+        try {
+          // Sanitize and prepare client data
+          const clientRecord = {
+            name: name,
+            email: email || "",
+            phone: rawRow.phone?.toString().trim() || "",
+            website: rawRow.website?.toString().trim() || "",
+            address: rawRow.address?.toString().trim() || "",
+            industry: rawRow.industry?.toString().trim() || "",
+            contactName: rawRow.contactName?.toString().trim() || "",
+            contactEmail: rawRow.contactEmail?.toString().trim() || "",
+            organizationId: organizationId,
+          };
+          
+          const newClient = await storage.createClient(clientRecord);
+          processedClients.push(newClient);
+          
+          // Create default permissions for the client
+          await storage.upsertClientPermissions({
+            clientId: newClient.id,
+            showIncomeGraph: true,
+            showCategoryBreakdown: true,
+            showPaymentHistory: true,
+            showInvoices: false,
+            organizationId: organizationId,
+          });
+          
+        } catch (insertError) {
+          console.error(`Error inserting client ${name}:`, insertError);
+          errors.push(`Row ${i + 1}: Failed to create client '${name}' - ${insertError instanceof Error ? insertError.message : 'Unknown error'}`);
+        }
+      }
+      
+      res.status(200).json({
+        message: `Successfully imported ${processedClients.length} of ${clientData.length} clients`,
+        imported: processedClients.length,
+        total: clientData.length,
+        errors: errors.length > 0 ? errors : undefined,
+        clients: processedClients
+      });
+      
+    } catch (error) {
+      console.error("Error importing clients:", error);
+      res.status(500).json({ 
+        message: "Failed to import clients",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Categories endpoints
   app.get("/api/categories", mockAuth, async (req: any, res) => {
     try {
