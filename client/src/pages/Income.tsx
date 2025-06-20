@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { CategorySelect } from "@/components/CategorySelect";
 
 interface IncomeRecord {
   id: string;
@@ -327,21 +328,12 @@ export default function Income() {
 
       <div>
         <Label htmlFor="categoryId">Category</Label>
-        <Select
+        <CategorySelect
           value={formData.categoryId}
           onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent>
-            {incomeCategories.map((category: any) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          type="income"
+          placeholder="Select income category"
+        />
       </div>
 
       <div>

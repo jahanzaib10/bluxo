@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { CategorySelect } from "@/components/CategorySelect";
 
 interface ExpenseRecord {
   id: string;
@@ -229,21 +230,12 @@ export default function Expenses() {
         </div>
         <div>
           <Label htmlFor="categoryId">Category</Label>
-          <Select
+          <CategorySelect
             value={formData.categoryId}
             onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {expenseCategories.map((category: any) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            type="expense"
+            placeholder="Select expense category"
+          />
         </div>
       </div>
 

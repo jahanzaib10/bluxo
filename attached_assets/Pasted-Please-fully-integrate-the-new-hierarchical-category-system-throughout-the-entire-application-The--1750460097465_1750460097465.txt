@@ -1,0 +1,78 @@
+Please fully integrate the new hierarchical category system throughout the entire application.
+
+The `categories` table now supports nested structures via `parent_id`. You previously built CSV import + preview support — now this logic must be applied everywhere categories are used.
+
+---
+
+✅ Step 1: Update All Category Pickers
+
+In the following modules, update category selectors to:
+
+- Show only categories of matching `type` (e.g. `income`, `expense`)
+- Display parent/child hierarchy using indentation or grouped sections
+- Allow only leaf categories to be selected (optional: show warning if selecting parent only)
+
+**Update these forms/pages:**
+- `/income` → show only `type = income`
+- `/expenses` → show only `type = expense`
+- `/subscriptions` → show only `type = expense`
+- Any edit/create modal using categories
+
+---
+
+✅ Step 2: Remove Dummy Categories
+
+- If any forms are hardcoded with category options (e.g. `"Software"` or `"Marketing"` strings), replace with dynamic values from the `categories` table
+- Sort categories by `name ASC` and group children under their parent
+- Auto-select the most recently used category (optional)
+
+---
+
+✅ Step 3: Make Filtering Category-Aware
+
+- In `/income`, `/expenses`, and `/subscriptions`, update filter dropdowns to use hierarchical categories
+- If parent category is selected → include all its children in filter query
+- Example: selecting "Employee Expenses" should show salaries, bonuses, etc.
+
+---
+
+✅ Step 4: Apply in Dashboard Widgets
+
+- Any chart showing breakdown by category (pie chart, bar graph, table):
+  - Group data using child categories
+  - Optionally show roll-up totals per parent (e.g. total "Tech & Software")
+
+---
+
+🧪 QA Test Checklist
+
+✅ Forms
+- `/income`, `/expenses`, `/subscriptions` allow choosing categories with hierarchy
+- Category dropdowns render nested structure
+- Creating a record with a category links it correctly
+
+✅ Filters
+- Parent category filters apply to child categories
+- Search works by name regardless of level
+
+✅ Charts
+- Income/Expense category breakdown reflects hierarchy
+
+✅ Import
+- Re-import CSV works with parent-child structure
+- Duplicate categories are skipped if matched
+
+---
+
+📘 Swagger Docs
+
+- No changes needed unless exposing `/api/categories` publicly
+
+---
+
+🔁 Regression Scope
+
+- Do not alter existing record-creation logic
+- Do not affect unrelated parts of the app like user management, clients, or auth
+
+This ensures categories are dynamic, scoped, and consistent across the entire platform.
