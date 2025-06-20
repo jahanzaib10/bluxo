@@ -4,6 +4,9 @@ import {
   clients, 
   developers, 
   employees,
+  paymentSources,
+  income,
+  expenses,
   users,
   type Account, 
   type InsertAccount,
@@ -15,6 +18,12 @@ import {
   type InsertDeveloper,
   type Employee, 
   type InsertEmployee,
+  type PaymentSource,
+  type InsertPaymentSource,
+  type Income,
+  type InsertIncome,
+  type Expense,
+  type InsertExpense,
   type User, 
   type InsertUser 
 } from "@shared/schema";
@@ -61,6 +70,27 @@ export interface IStorage {
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   updateEmployee(id: string, employee: Partial<InsertEmployee>): Promise<Employee | undefined>;
   deleteEmployee(id: string): Promise<boolean>;
+
+  // Payment Source methods
+  getPaymentSources(): Promise<PaymentSource[]>;
+  getPaymentSource(id: string): Promise<PaymentSource | undefined>;
+  createPaymentSource(paymentSource: InsertPaymentSource): Promise<PaymentSource>;
+  updatePaymentSource(id: string, paymentSource: Partial<InsertPaymentSource>): Promise<PaymentSource | undefined>;
+  deletePaymentSource(id: string): Promise<boolean>;
+
+  // Income methods
+  getIncome(): Promise<Income[]>;
+  getIncomeById(id: string): Promise<Income | undefined>;
+  createIncome(income: InsertIncome): Promise<Income>;
+  updateIncome(id: string, income: Partial<InsertIncome>): Promise<Income | undefined>;
+  deleteIncome(id: string): Promise<boolean>;
+
+  // Expense methods
+  getExpenses(): Promise<Expense[]>;
+  getExpenseById(id: string): Promise<Expense | undefined>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: string, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
+  deleteExpense(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -222,6 +252,102 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEmployee(id: string): Promise<boolean> {
     const result = await db.delete(employees).where(eq(employees.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Payment Source methods
+  async getPaymentSources(): Promise<PaymentSource[]> {
+    return await db.select().from(paymentSources).orderBy(desc(paymentSources.createdAt));
+  }
+
+  async getPaymentSource(id: string): Promise<PaymentSource | undefined> {
+    const [paymentSource] = await db.select().from(paymentSources).where(eq(paymentSources.id, id));
+    return paymentSource || undefined;
+  }
+
+  async createPaymentSource(paymentSource: InsertPaymentSource): Promise<PaymentSource> {
+    const [created] = await db
+      .insert(paymentSources)
+      .values(paymentSource)
+      .returning();
+    return created;
+  }
+
+  async updatePaymentSource(id: string, paymentSource: Partial<InsertPaymentSource>): Promise<PaymentSource | undefined> {
+    const [updated] = await db
+      .update(paymentSources)
+      .set(paymentSource)
+      .where(eq(paymentSources.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deletePaymentSource(id: string): Promise<boolean> {
+    const result = await db.delete(paymentSources).where(eq(paymentSources.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Income methods
+  async getIncome(): Promise<Income[]> {
+    return await db.select().from(income).orderBy(desc(income.createdAt));
+  }
+
+  async getIncomeById(id: string): Promise<Income | undefined> {
+    const [incomeRecord] = await db.select().from(income).where(eq(income.id, id));
+    return incomeRecord || undefined;
+  }
+
+  async createIncome(incomeData: InsertIncome): Promise<Income> {
+    const [created] = await db
+      .insert(income)
+      .values(incomeData)
+      .returning();
+    return created;
+  }
+
+  async updateIncome(id: string, incomeData: Partial<InsertIncome>): Promise<Income | undefined> {
+    const [updated] = await db
+      .update(income)
+      .set(incomeData)
+      .where(eq(income.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteIncome(id: string): Promise<boolean> {
+    const result = await db.delete(income).where(eq(income.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Expense methods
+  async getExpenses(): Promise<Expense[]> {
+    return await db.select().from(expenses).orderBy(desc(expenses.createdAt));
+  }
+
+  async getExpenseById(id: string): Promise<Expense | undefined> {
+    const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
+    return expense || undefined;
+  }
+
+  async createExpense(expenseData: InsertExpense): Promise<Expense> {
+    const [created] = await db
+      .insert(expenses)
+      .values(expenseData)
+      .returning();
+    return created;
+  }
+
+  async updateExpense(id: string, expenseData: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const [updated] = await db
+      .update(expenses)
+      .set(expenseData)
+      .where(eq(expenses.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteExpense(id: string): Promise<boolean> {
+    const result = await db.delete(expenses).where(eq(expenses.id, id));
     return result.rowCount > 0;
   }
 }

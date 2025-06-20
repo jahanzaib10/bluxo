@@ -652,6 +652,298 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Income routes
+  app.get("/api/income", mockAuth, async (req: any, res) => {
+    try {
+      const incomeRecords = await storage.getIncome();
+      const clientsData = await storage.getClients();
+      const paymentSourcesData = await storage.getPaymentSources();
+      const categoriesData = await storage.getCategories();
+
+      const enrichedIncome = incomeRecords.map(record => ({
+        ...record,
+        clientName: clientsData.find(c => c.id === record.clientId)?.name || 'Unknown',
+        paymentSourceName: paymentSourcesData.find(p => p.id === record.paymentSourceId)?.name || 'Unknown',
+        categoryName: categoriesData.find(c => c.id === record.categoryId)?.name || 'Unknown'
+      }));
+
+      res.json(enrichedIncome);
+    } catch (error) {
+      console.error("Error fetching income:", error);
+      res.status(500).json({ message: "Failed to fetch income" });
+    }
+  });
+
+  app.post("/api/income", mockAuth, async (req: any, res) => {
+    try {
+      const validatedData = insertIncomeSchema.parse(req.body);
+      const incomeData = {
+        ...validatedData,
+        amount: validatedData.amount,
+        organizationId: req.user.organizationId
+      };
+      const newIncome = await storage.createIncome(incomeData);
+      res.status(201).json(newIncome);
+    } catch (error) {
+      console.error("Error creating income:", error);
+      res.status(500).json({ message: "Failed to create income" });
+    }
+  });
+
+  app.put("/api/income/:id", mockAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertIncomeSchema.partial().parse(req.body);
+      const updatedIncome = await storage.updateIncome(id, validatedData);
+      if (!updatedIncome) {
+        return res.status(404).json({ message: "Income not found" });
+      }
+      res.json(updatedIncome);
+    } catch (error) {
+      console.error("Error updating income:", error);
+      res.status(500).json({ message: "Failed to update income" });
+    }
+  });
+
+  app.delete("/api/income/:id", mockAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteIncome(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Income not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting income:", error);
+      res.status(500).json({ message: "Failed to delete income" });
+    }
+  });
+
+  // Income CSV import
+  app.post("/api/income/import", mockAuth, async (req: any, res) => {
+    try {
+      const { csvData } = req.body;
+      if (!csvData || !Array.isArray(csvData)) {
+        return res.status(400).json({ message: "Invalid CSV data" });
+      }
+
+      const clients = await storage.getClients();
+      const paymentSources = await storage.getPaymentSources();
+      const categories = await storage.getCategories();
+      const organizationId = req.user.organizationId;
+
+      const results = [];
+      const errors = [];
+
+      for (const [index, row] of csvData.entries()) {
+        try {
+          const amount = sanitizePaymentAmount(row.amount || "0");
+          const date = parseFlexibleDate(row.date);
+          
+          if (!date) {
+            errors.push(`Row ${index + 1}: Invalid date format`);
+            continue;
+          }
+
+          // Find client by name
+          const client = clients.find(c => 
+            normalizeText(c.name) === normalizeText(row.client_name || row.clientName || "")
+          );
+
+          // Find payment source by name
+          const paymentSource = paymentSources.find(p => 
+            normalizeText(p.name) === normalizeText(row.payment_source_name || row.paymentSourceName || "")
+          );
+
+          // Find category by name (income type)
+          const category = categories.find(c => 
+            c.type === 'income' && 
+            normalizeText(c.name) === normalizeText(row.category_name || row.categoryName || "")
+          );
+
+          const incomeData = {
+            amount: amount.toString(),
+            date,
+            clientId: client?.id,
+            paymentSourceId: paymentSource?.id,
+            categoryId: category?.id,
+            description: row.description || "",
+            isRecurring: row.is_recurring === "true" || row.isRecurring === true,
+            organizationId
+          };
+
+          const created = await storage.createIncome(incomeData);
+          results.push(created);
+        } catch (error) {
+          errors.push(`Row ${index + 1}: ${error.message}`);
+        }
+      }
+
+      res.json({ 
+        imported: results.length, 
+        errors: errors.length,
+        errorDetails: errors 
+      });
+    } catch (error) {
+      console.error("Error importing income:", error);
+      res.status(500).json({ message: "Failed to import income" });
+    }
+  });
+
+  // Expenses routes
+  app.get("/api/expenses", mockAuth, async (req: any, res) => {
+    try {
+      const expenseRecords = await storage.getExpenses();
+      const employeesData = await storage.getEmployees();
+      const categoriesData = await storage.getCategories();
+
+      const enrichedExpenses = expenseRecords.map(record => ({
+        ...record,
+        employeeName: employeesData.find(e => e.id === record.employeeId)?.name || 'Unknown',
+        categoryName: categoriesData.find(c => c.id === record.categoryId)?.name || 'Unknown'
+      }));
+
+      res.json(enrichedExpenses);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+      res.status(500).json({ message: "Failed to fetch expenses" });
+    }
+  });
+
+  app.post("/api/expenses", mockAuth, async (req: any, res) => {
+    try {
+      const validatedData = insertExpenseSchema.parse(req.body);
+      const expenseData = {
+        ...validatedData,
+        amount: validatedData.amount,
+        organizationId: req.user.organizationId
+      };
+      const newExpense = await storage.createExpense(expenseData);
+      res.status(201).json(newExpense);
+    } catch (error) {
+      console.error("Error creating expense:", error);
+      res.status(500).json({ message: "Failed to create expense" });
+    }
+  });
+
+  app.put("/api/expenses/:id", mockAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertExpenseSchema.partial().parse(req.body);
+      const updatedExpense = await storage.updateExpense(id, validatedData);
+      if (!updatedExpense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      res.json(updatedExpense);
+    } catch (error) {
+      console.error("Error updating expense:", error);
+      res.status(500).json({ message: "Failed to update expense" });
+    }
+  });
+
+  app.delete("/api/expenses/:id", mockAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteExpense(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      res.status(500).json({ message: "Failed to delete expense" });
+    }
+  });
+
+  // Expenses CSV import
+  app.post("/api/expenses/import", mockAuth, async (req: any, res) => {
+    try {
+      const { csvData } = req.body;
+      if (!csvData || !Array.isArray(csvData)) {
+        return res.status(400).json({ message: "Invalid CSV data" });
+      }
+
+      const employees = await storage.getEmployees();
+      const categories = await storage.getCategories();
+      const organizationId = req.user.organizationId;
+
+      const results = [];
+      const errors = [];
+
+      for (const [index, row] of csvData.entries()) {
+        try {
+          const amount = sanitizePaymentAmount(row.amount || "0");
+          const date = parseFlexibleDate(row.date);
+          
+          if (!date) {
+            errors.push(`Row ${index + 1}: Invalid date format`);
+            continue;
+          }
+
+          // Find employee by name
+          const employee = employees.find(e => 
+            normalizeText(e.name) === normalizeText(row.employee_name || row.employeeName || "")
+          );
+
+          // Find category by name (expense type)
+          const category = categories.find(c => 
+            c.type === 'expense' && 
+            normalizeText(c.name) === normalizeText(row.category_name || row.categoryName || "")
+          );
+
+          const expenseData = {
+            amount: amount.toString(),
+            date,
+            employeeId: employee?.id,
+            categoryId: category?.id,
+            description: row.description || "",
+            organizationId
+          };
+
+          const created = await storage.createExpense(expenseData);
+          results.push(created);
+        } catch (error) {
+          errors.push(`Row ${index + 1}: ${error.message}`);
+        }
+      }
+
+      res.json({ 
+        imported: results.length, 
+        errors: errors.length,
+        errorDetails: errors 
+      });
+    } catch (error) {
+      console.error("Error importing expenses:", error);
+      res.status(500).json({ message: "Failed to import expenses" });
+    }
+  });
+
+  // Payment Sources routes
+  app.get("/api/payment-sources", mockAuth, async (req: any, res) => {
+    try {
+      const paymentSources = await storage.getPaymentSources();
+      res.json(paymentSources);
+    } catch (error) {
+      console.error("Error fetching payment sources:", error);
+      res.status(500).json({ message: "Failed to fetch payment sources" });
+    }
+  });
+
+  app.post("/api/payment-sources", mockAuth, async (req: any, res) => {
+    try {
+      const validatedData = insertPaymentSourceSchema.parse(req.body);
+      const paymentSourceData = {
+        ...validatedData,
+        organizationId: req.user.organizationId
+      };
+      const newPaymentSource = await storage.createPaymentSource(paymentSourceData);
+      res.status(201).json(newPaymentSource);
+    } catch (error) {
+      console.error("Error creating payment source:", error);
+      res.status(500).json({ message: "Failed to create payment source" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
