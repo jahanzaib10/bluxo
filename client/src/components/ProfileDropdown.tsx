@@ -22,12 +22,12 @@ export default function ProfileDropdown() {
       document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
       localStorage.removeItem('auth_token');
       
-      // Force page reload to clear all state
-      window.location.href = '/login';
+      // Reload the page to trigger re-authentication check
+      window.location.reload();
     } catch (error) {
       console.error('Logout error:', error);
       // Force reload even if there's an error
-      window.location.href = '/login';
+      window.location.reload();
     }
   };
 

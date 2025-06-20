@@ -68,12 +68,12 @@ export function Layout({ children }: LayoutProps) {
       document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
       localStorage.removeItem('auth_token');
       
-      // Force redirect to login
-      window.location.href = '/login';
+      // Reload the page to trigger re-authentication check
+      window.location.reload();
     } catch (error) {
       console.error('Logout error:', error);
-      // Force redirect even if there's an error
-      window.location.href = '/login';
+      // Force reload even if there's an error
+      window.location.reload();
     }
   };
 
