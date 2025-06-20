@@ -27,7 +27,11 @@ import { randomUUID } from "crypto";
 
 // Mock auth middleware for now
 function mockAuth(req: any, res: any, next: any) {
-  req.user = { organizationId: "2723d846-8be7-4d00-9892-ea199b74d73d" };
+  req.user = { 
+    id: "owner-user-id",
+    email: "jay@dartnox.com",
+    organizationId: "2723d846-8be7-4d00-9892-ea199b74d73d" 
+  };
   next();
 }
 
@@ -1546,6 +1550,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting subscription:", error);
       res.status(500).json({ message: "Failed to delete subscription" });
+    }
+  });
+
+  // Ensure owner user exists
+  app.post("/api/users/owner/ensure", mockAuth, async (req: any, res) => {
+    try {
+      const { id: userId, email, organizationId } = req.user;
+      
+      // Check if owner already exists
+      const existingUser = await storage.getUser(userId);
+      if (existingUser) {
+        return res.json({ message: "Owner already exists", user: existingUser });
+      }
+      
+      // Create owner user
+      const ownerUser = {
+        id: userId,
+        email: email,
+        name: "Jay (Owner)",
+        profileImageUrl: "",
+        organizationId: organizationId,
+        role: "super_admin" as const,
+        type: "internal" as const,
+        status: "active" as const,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastLoginAt: new Date()
+      };
+      
+      await db.insert(users).values(ownerUser);
+      res.json({ message: "Owner user created", user: ownerUser });
+    } catch (error) {
+      console.error("Error ensuring owner user:", error);
+      res.status(500).json({ message: "Failed to ensure owner user" });
     }
   });
 
