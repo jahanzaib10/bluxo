@@ -44,10 +44,11 @@ const settingsNavItems = [
 export function Layout({ children }: LayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { theme, setTheme } = useTheme();
-  const location = useLocation();
+  const [location] = useLocation();
 
   const isActivePath = (path: string) => {
-    return location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(path));
+    if (!location) return false;
+    return location === path || (path !== '/dashboard' && location.startsWith(path));
   };
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
