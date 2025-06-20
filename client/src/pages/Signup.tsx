@@ -144,7 +144,7 @@ export default function Signup() {
           </Form>
           <div className="mt-4 text-center text-sm">
             Already have an account?{" "}
-            <Button variant="link" className="p-0" onClick={() => navigate("/login")}>
+            <Button variant="link" className="p-0" onClick={() => setLocation("/login")}>
               Sign in
             </Button>
           </div>
