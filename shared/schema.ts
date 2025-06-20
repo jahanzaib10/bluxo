@@ -221,11 +221,6 @@ export const insertEmployeeSchema = createInsertSchema(employees).omit({
   createdAt: true,
 });
 
-export const insertPaymentSourceSchema = createInsertSchema(paymentSources).omit({
-  id: true,
-  createdAt: true,
-});
-
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
   createdAt: true,
@@ -236,7 +231,7 @@ export const insertIncomeSchema = createInsertSchema(income).omit({
   createdAt: true,
 });
 
-export const insertSpendingSchema = createInsertSchema(spending).omit({
+export const insertExpenseSchema = createInsertSchema(expenses).omit({
   id: true,
   createdAt: true,
 });
@@ -259,8 +254,7 @@ export type Subscription = typeof subscriptions.$inferSelect;
 
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
-export type InsertPaymentSource = z.infer<typeof insertPaymentSourceSchema>;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertIncome = z.infer<typeof insertIncomeSchema>;
-export type InsertSpending = z.infer<typeof insertSpendingSchema>;
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
