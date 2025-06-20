@@ -7,20 +7,13 @@ import {
   categories, 
   income, 
   expenses, 
-  subscriptions,
-  insertClientSchema,
-  insertEmployeeSchema,
-  insertCategorySchema,
-  insertIncomeSchema,
-  insertExpenseSchema,
-  insertSubscriptionSchema
+  subscriptions
 } from "@shared/schema";
-import { eq, sum, and, desc } from "drizzle-orm";
+import { eq, sum, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 // Mock auth middleware for now
 function mockAuth(req: any, res: any, next: any) {
-  // For testing, we'll mock an organization ID
   req.user = { organizationId: "test-org-id" };
   next();
 }
@@ -52,7 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalIncome,
         totalSpending: totalExpenses,
         netIncome,
-        monthlyNet: netIncome // Simplified for now
+        monthlyNet: netIncome
       });
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -80,14 +73,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/clients", mockAuth, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId;
-      const validatedData = insertClientSchema.parse(req.body);
+      const { name, email } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Name is required" });
+      }
       
       const [newClient] = await db
         .insert(clients)
         .values({
-          ...validatedData,
+          id: randomUUID(),
+          name,
+          email: email || null,
           organizationId,
-          id: crypto.randomUUID(),
           createdAt: new Date(),
         })
         .returning();
@@ -119,11 +117,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/employees", mockAuth, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId;
-      const validatedData = insertEmployeeSchema.parse(req.body);
+      const { name, email, position } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Name is required" });
+      }
       
       const [newEmployee] = await db
         .insert(employees)
-        .values({ ...validatedData, organizationId })
+        .values({
+          id: randomUUID(),
+          name,
+          email: email || null,
+          position: position || null,
+          organizationId,
+          createdAt: new Date(),
+        })
         .returning();
       
       res.status(201).json(newEmployee);
@@ -153,11 +162,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/categories", mockAuth, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId;
-      const validatedData = insertCategorySchema.parse(req.body);
+      const { name, type } = req.body;
+      
+      if (!name || !type) {
+        return res.status(400).json({ message: "Name and type are required" });
+      }
       
       const [newCategory] = await db
         .insert(categories)
-        .values({ ...validatedData, organizationId })
+        .values({
+          id: randomUUID(),
+          name,
+          type,
+          organizationId,
+          createdAt: new Date(),
+        })
         .returning();
       
       res.status(201).json(newCategory);
@@ -187,11 +206,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/income", mockAuth, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId;
-      const validatedData = insertIncomeSchema.parse(req.body);
+      const { amount, description, date, clientId, categoryId } = req.body;
+      
+      if (!amount || !date) {
+        return res.status(400).json({ message: "Amount and date are required" });
+      }
       
       const [newIncome] = await db
         .insert(income)
-        .values({ ...validatedData, organizationId })
+        .values({
+          id: randomUUID(),
+          amount,
+          description: description || null,
+          date,
+          clientId: clientId || null,
+          categoryId: categoryId || null,
+          organizationId,
+          createdAt: new Date(),
+        })
         .returning();
       
       res.status(201).json(newIncome);
@@ -221,11 +253,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/expenses", mockAuth, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId;
-      const validatedData = insertExpenseSchema.parse(req.body);
+      const { amount, description, date, employeeId, categoryId } = req.body;
+      
+      if (!amount || !date) {
+        return res.status(400).json({ message: "Amount and date are required" });
+      }
       
       const [newExpense] = await db
         .insert(expenses)
-        .values({ ...validatedData, organizationId })
+        .values({
+          id: randomUUID(),
+          amount,
+          description: description || null,
+          date,
+          employeeId: employeeId || null,
+          categoryId: categoryId || null,
+          organizationId,
+          createdAt: new Date(),
+        })
         .returning();
       
       res.status(201).json(newExpense);
@@ -255,11 +300,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/subscriptions", mockAuth, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId;
-      const validatedData = insertSubscriptionSchema.parse(req.body);
+      const { name, amount, billingCycle, nextDueDate } = req.body;
+      
+      if (!name || !amount || !billingCycle || !nextDueDate) {
+        return res.status(400).json({ message: "Name, amount, billing cycle, and next due date are required" });
+      }
       
       const [newSubscription] = await db
         .insert(subscriptions)
-        .values({ ...validatedData, organizationId })
+        .values({
+          id: randomUUID(),
+          name,
+          amount,
+          billingCycle,
+          nextDueDate,
+          organizationId,
+          createdAt: new Date(),
+        })
         .returning();
       
       res.status(201).json(newSubscription);
