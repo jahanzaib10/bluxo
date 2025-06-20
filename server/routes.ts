@@ -724,6 +724,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Income CSV Import endpoint
+  app.post("/api/income/import", mockAuth, async (req: any, res) => {
+    try {
+      const { csvData } = req.body;
+      if (!csvData) {
+        return res.status(400).json({ message: "CSV data is required" });
+      }
+
+      const lines = csvData.trim().split('\n');
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "CSV must contain headers and at least one data row" });
+      }
+
+      const headers = lines[0].split(',').map((h: string) => h.trim().toLowerCase());
+      const dataLines = lines.slice(1);
+
+      let imported = 0;
+      let errors = 0;
+      const errorMessages: string[] = [];
+
+      for (let i = 0; i < dataLines.length; i++) {
+        try {
+          const values = dataLines[i].split(',').map((v: string) => v.trim());
+          const row: any = {};
+
+          headers.forEach((header: string, index: number) => {
+            const value = values[index] || '';
+            row[header] = value;
+          });
+
+          // Map CSV fields to database fields
+          const incomeData: any = {
+            organizationId: req.user.organizationId,
+            amount: sanitizePaymentAmount(row.amount || '0'),
+            currency: row.currency || 'USD',
+            date: parseFlexibleDate(row.date) || new Date().toISOString().split('T')[0],
+            description: row.description || '',
+            status: ['paid', 'pending', 'failed'].includes(row.status) ? row.status : 'paid',
+            isRecurring: row.is_recurring === 'true' || row.is_recurring === '1',
+            invoiceId: row.invoice_id || null,
+          };
+
+          // Handle recurring frequency
+          if (incomeData.isRecurring && row.recurring_frequency) {
+            const validFrequencies = ['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly'];
+            if (validFrequencies.includes(row.recurring_frequency)) {
+              incomeData.recurringFrequency = row.recurring_frequency;
+            }
+          }
+
+          // Handle recurring end date
+          if (incomeData.isRecurring && row.recurring_end_date) {
+            const endDate = parseFlexibleDate(row.recurring_end_date);
+            if (endDate) {
+              incomeData.recurringEndDate = endDate;
+            }
+          }
+
+          // Find category by name
+          if (row.category) {
+            const categories = await storage.getCategories();
+            const category = categories.find((c: any) => 
+              c.name.toLowerCase() === row.category.toLowerCase() && c.type === 'income'
+            );
+            if (category) {
+              incomeData.categoryId = category.id;
+            }
+          }
+
+          // Find client by name or ID
+          if (row.client_id) {
+            const clients = await storage.getClients();
+            const client = clients.find((c: any) => 
+              c.id === row.client_id || c.name.toLowerCase() === row.client_id.toLowerCase()
+            );
+            if (client) {
+              incomeData.clientId = client.id;
+            }
+          }
+
+          // Find payment source by name or ID
+          if (row.payment_source_id) {
+            const paymentSources = await storage.getPaymentSources();
+            const paymentSource = paymentSources.find((p: any) => 
+              p.id === row.payment_source_id || p.name.toLowerCase() === row.payment_source_id.toLowerCase()
+            );
+            if (paymentSource) {
+              incomeData.paymentSourceId = paymentSource.id;
+            }
+          }
+
+          await storage.createIncome(incomeData);
+          imported++;
+        } catch (error) {
+          errors++;
+          errorMessages.push(`Row ${i + 2}: ${error}`);
+        }
+      }
+
+      res.json({
+        imported,
+        errors,
+        total: dataLines.length,
+        errorMessages: errorMessages.slice(0, 10) // Limit error messages
+      });
+    } catch (error) {
+      console.error("Error importing income CSV:", error);
+      res.status(500).json({ message: "Failed to import income CSV" });
+    }
+  });
+
   app.post("/api/income/import", mockAuth, async (req: any, res) => {
     try {
       const { income: incomeData } = req.body;

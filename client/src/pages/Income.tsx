@@ -58,6 +58,7 @@ export default function Income() {
   const [editingIncome, setEditingIncome] = useState<IncomeRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [csvData, setCsvData] = useState("");
+  const [previewData, setPreviewData] = useState<any[]>([]);
   
   const [formData, setFormData] = useState<FormData>({
     amount: "",
@@ -134,11 +135,12 @@ export default function Income() {
   });
 
   const importMutation = useMutation({
-    mutationFn: (csvData: any[]) => apiRequest("/api/income/import", "POST", { csvData }),
+    mutationFn: (csvData: string) => apiRequest("/api/income/import", "POST", { csvData }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/income"] });
       setIsImportOpen(false);
       setCsvData("");
+      setPreviewData([]);
       toast({ 
         title: `Import completed: ${data.imported} records imported, ${data.errors} errors` 
       });
@@ -199,22 +201,39 @@ export default function Income() {
     }
   };
 
-  const handleImport = () => {
-    try {
-      const lines = csvData.trim().split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const data = lines.slice(1).map(line => {
-        const values = line.split(',').map(v => v.trim());
-        const row: any = {};
-        headers.forEach((header, index) => {
-          row[header] = values[index] || "";
-        });
-        return row;
+  const parseCsv = (csvText: string) => {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) return [];
+    
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const dataLines = lines.slice(1);
+    
+    return dataLines.map(line => {
+      const values = line.split(',').map(v => v.trim());
+      const row: any = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
       });
-      importMutation.mutate(data);
-    } catch (error) {
-      toast({ title: "Invalid CSV format", variant: "destructive" });
+      return row;
+    });
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const csvText = e.target?.result as string;
+        setCsvData(csvText);
+        const parsed = parseCsv(csvText);
+        setPreviewData(parsed);
+      };
+      reader.readAsText(file);
     }
+  };
+
+  const handleImport = () => {
+    importMutation.mutate(csvData);
   };
 
   const filteredIncome = income.filter((record: IncomeRecord) =>
