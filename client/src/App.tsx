@@ -16,6 +16,11 @@ import InviteAcceptance from "./pages/InviteAcceptance";
 import DebugInvitation from "./pages/DebugInvitation";
 import NotFound from "./pages/NotFound";
 import { Settings } from "./pages/settings/Settings";
+import Clients from "./pages/clients";
+import Employees from "./pages/employees";
+import CategoriesSettingsPage from "./pages/settings/categories";
+import { PaymentSourcesSettings } from "./pages/settings/PaymentSourcesSettings";
+import { UserManagementSettings } from "./pages/settings/UserManagementSettings";
 import { queryClient } from "./lib/queryClient";
 
 const App = () => (
@@ -36,7 +41,7 @@ const App = () => (
               <Route path="/invite/:token" element={<InviteAcceptance />} />
               <Route path="/debug-invitation" element={<DebugInvitation />} />
               
-              {/* Settings routes - put these before dashboard routes to avoid conflicts */}
+              {/* Settings routes - individual page components */}
               <Route 
                 path="/settings" 
                 element={
@@ -52,7 +57,7 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <SidebarProvider>
-                      <Settings />
+                      <CategoriesSettingsPage />
                     </SidebarProvider>
                   </ProtectedRoute>
                 } 
@@ -62,7 +67,7 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <SidebarProvider>
-                      <Settings />
+                      <PaymentSourcesSettings />
                     </SidebarProvider>
                   </ProtectedRoute>
                 } 
@@ -72,7 +77,29 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <SidebarProvider>
-                      <Settings />
+                      <UserManagementSettings />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Page-level routes for individual components */}
+              <Route 
+                path="/clients" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Clients />
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/employees" 
+                element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <Employees />
                     </SidebarProvider>
                   </ProtectedRoute>
                 } 
@@ -105,26 +132,6 @@ const App = () => (
                   <ProtectedRoute>
                     <SidebarProvider>
                       <Dashboard tab="finance" />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/clients" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <Dashboard tab="clients" />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/employees" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <Dashboard tab="employees" />
                     </SidebarProvider>
                   </ProtectedRoute>
                 } 

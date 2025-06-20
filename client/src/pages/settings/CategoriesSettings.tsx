@@ -6,35 +6,74 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Settings, Tag, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Edit, Trash2, FolderTree, Folder, FileText, ChevronRight, ChevronDown } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
 
+interface Category {
+  id: string;
+  name: string;
+  parentId?: string;
+  description?: string;
+  color?: string;
+  children?: Category[];
+}
+
 export function CategoriesSettings() {
-  const [showCategoryForm, setShowCategoryForm] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<any>(null);
-  
-  const [categoryForm, setCategoryForm] = useState({
+  const [showForm, setShowForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [formData, setFormData] = useState({
     name: '',
-    type: 'expense' as 'income' | 'expense'
+    parentId: '',
+    description: '',
+    color: '#3B82F6'
   });
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Categories queries
   const { data: categories = [] } = useQuery({
     queryKey: ['/api/categories'],
   });
 
-  // Category mutations
+  // Build category tree structure
+  const categoryTree = React.useMemo(() => {
+    if (!Array.isArray(categories)) return [];
+
+    const categoryMap = new Map<string, Category>();
+    const rootCategories: Category[] = [];
+
+    // First pass: create map of all categories
+    categories.forEach((cat: any) => {
+      categoryMap.set(cat.id, { ...cat, children: [] });
+    });
+
+    // Second pass: build tree structure
+    categories.forEach((cat: any) => {
+      const category = categoryMap.get(cat.id)!;
+      if (cat.parentId && categoryMap.has(cat.parentId)) {
+        const parent = categoryMap.get(cat.parentId)!;
+        parent.children!.push(category);
+      } else {
+        rootCategories.push(category);
+      }
+    });
+
+    return rootCategories;
+  }, [categories]);
+
   const createCategory = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('POST', '/api/categories', data);
+      const cleanData = {
+        ...data,
+        parentId: data.parentId === 'no-parent' ? null : data.parentId || null
+      };
+      return apiRequest('POST', '/api/categories', cleanData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      setShowCategoryForm(false);
-      setCategoryForm({ name: '', type: 'expense' });
+      resetForm();
       toast({ title: "Success", description: "Category created successfully." });
     },
     onError: (error: any) => {
@@ -44,13 +83,15 @@ export function CategoriesSettings() {
 
   const updateCategory = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      return apiRequest('PUT', `/api/categories/${id}`, data);
+      const cleanData = {
+        ...data,
+        parentId: data.parentId || null
+      };
+      return apiRequest('PUT', `/api/categories/${id}`, cleanData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      setEditingCategory(null);
-      setCategoryForm({ name: '', type: 'expense' });
-      setShowCategoryForm(false);
+      resetForm();
       toast({ title: "Success", description: "Category updated successfully." });
     },
     onError: (error: any) => {
@@ -71,40 +112,129 @@ export function CategoriesSettings() {
     },
   });
 
-  // Handler functions
-  const handleEditCategory = (category: any) => {
-    setEditingCategory(category);
-    setCategoryForm({
-      name: category.name,
-      type: category.type
-    });
-    setShowCategoryForm(true);
-  };
-
-  const handleCategorySubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingCategory) {
-      updateCategory.mutate({ id: editingCategory.id, ...categoryForm });
+      updateCategory.mutate({ id: editingCategory.id, ...formData });
     } else {
-      createCategory.mutate(categoryForm);
+      createCategory.mutate(formData);
     }
   };
 
-  const resetCategoryForm = () => {
-    setShowCategoryForm(false);
+  const resetForm = () => {
+    setShowForm(false);
     setEditingCategory(null);
-    setCategoryForm({ name: '', type: 'expense' });
+    setFormData({
+      name: '',
+      parentId: '',
+      description: '',
+      color: '#3B82F6'
+    });
   };
 
-  const handleDeleteCategory = (id: string) => {
-    if (confirm('Are you sure you want to delete this category?')) {
-      deleteCategory.mutate(id);
+  const handleEdit = (category: Category) => {
+    setEditingCategory(category);
+    setFormData({
+      name: category.name,
+      parentId: category.parentId || '',
+      description: category.description || '',
+      color: category.color || '#3B82F6'
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = (category: Category) => {
+    if (confirm(`Are you sure you want to delete "${category.name}"? This will also delete all subcategories.`)) {
+      deleteCategory.mutate(category.id);
     }
   };
 
-  // Filter categories by type
-  const incomeCategories = Array.isArray(categories) ? categories.filter((cat: any) => cat.type === 'income') : [];
-  const expenseCategories = Array.isArray(categories) ? categories.filter((cat: any) => cat.type === 'expense') : [];
+  const toggleExpanded = (categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
+  const renderCategoryTree = (categories: Category[], level = 0) => {
+    return categories.map((category) => (
+      <div key={category.id} className="space-y-1">
+        <div 
+          className={`flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 ${
+            level > 0 ? 'ml-6 border-l-2 border-slate-200' : ''
+          }`}
+        >
+          <div className="flex items-center gap-2 flex-1">
+            {category.children && category.children.length > 0 ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleExpanded(category.id)}
+                className="p-1 h-6 w-6"
+              >
+                {expandedCategories.has(category.id) ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+              </Button>
+            ) : (
+              <div className="w-6" />
+            )}
+            
+            {category.children && category.children.length > 0 ? (
+              <Folder className="h-4 w-4 text-blue-600" />
+            ) : (
+              <FileText className="h-4 w-4 text-slate-600" />
+            )}
+            
+            <div className="flex items-center gap-2 flex-1">
+              <span className="font-medium">{category.name}</span>
+              {category.color && (
+                <div 
+                  className="w-3 h-3 rounded-full border"
+                  style={{ backgroundColor: category.color }}
+                />
+              )}
+            </div>
+            
+            {category.description && (
+              <span className="text-sm text-muted-foreground truncate max-w-xs">
+                {category.description}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => handleEdit(category)}>
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(category)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        
+        {category.children && 
+         category.children.length > 0 && 
+         expandedCategories.has(category.id) && (
+          <div className="space-y-1">
+            {renderCategoryTree(category.children, level + 1)}
+          </div>
+        )}
+      </div>
+    ));
+  };
+
+  const flatCategories = React.useMemo(() => {
+    if (!Array.isArray(categories)) return [];
+    return categories;
+  }, [categories]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -112,10 +242,10 @@ export function CategoriesSettings() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Categories Settings</h1>
           <p className="text-muted-foreground">
-            Manage income and expense categories for better financial tracking
+            Organize your finances with hierarchical categories
           </p>
         </div>
-        <Button onClick={() => setShowCategoryForm(true)}>
+        <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Category
         </Button>
@@ -126,167 +256,117 @@ export function CategoriesSettings() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Categories</CardTitle>
-            <Tag className="h-4 w-4 text-muted-foreground" />
+            <FolderTree className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Array.isArray(categories) ? categories.length : 0}
+              {flatCategories.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              All category types
+              All categories
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Income Categories</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Root Categories</CardTitle>
+            <Folder className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {incomeCategories.length}
+            <div className="text-2xl font-bold text-blue-600">
+              {categoryTree.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Revenue sources
+              Top-level categories
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Expense Categories</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-sm font-medium">Subcategories</CardTitle>
+            <FileText className="h-4 w-4 text-slate-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {expenseCategories.length}
+            <div className="text-2xl font-bold text-slate-600">
+              {flatCategories.length - categoryTree.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Cost centers
+              Nested categories
             </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Categories List */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Income Categories */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-600">
-              <TrendingUp className="h-5 w-5" />
-              Income Categories
-            </CardTitle>
-            <CardDescription>Categories for tracking revenue and income sources</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {incomeCategories.map((category: any) => (
-                <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg bg-green-50/50">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="font-medium">{category.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleEditCategory(category)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCategory(category.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {incomeCategories.length === 0 && (
-                <div className="text-center py-6 text-muted-foreground">
-                  No income categories yet
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Expense Categories */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <TrendingDown className="h-5 w-5" />
-              Expense Categories
-            </CardTitle>
-            <CardDescription>Categories for tracking costs and expenses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {expenseCategories.map((category: any) => (
-                <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg bg-red-50/50">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    <span className="font-medium">{category.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleEditCategory(category)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCategory(category.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {expenseCategories.length === 0 && (
-                <div className="text-center py-6 text-muted-foreground">
-                  No expense categories yet
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Add/Edit Category Form */}
-      {showCategoryForm && (
+      {showForm && (
         <Card>
           <CardHeader>
             <CardTitle>{editingCategory ? 'Edit Category' : 'Add New Category'}</CardTitle>
             <CardDescription>
-              {editingCategory ? 'Update category information' : 'Create a new category for tracking'}
+              {editingCategory ? 'Update category information' : 'Create a new category for organizing transactions'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleCategorySubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="categoryName">Category Name</Label>
                   <Input
                     id="categoryName"
-                    value={categoryForm.name}
-                    onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Enter category name"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="categoryType">Category Type</Label>
+                  <Label htmlFor="parentCategory">Parent Category</Label>
                   <Select
-                    value={categoryForm.type}
-                    onValueChange={(value: 'income' | 'expense') => 
-                      setCategoryForm({ ...categoryForm, type: value })
-                    }
+                    value={formData.parentId}
+                    onValueChange={(value) => setFormData({ ...formData, parentId: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
+                      <SelectValue placeholder="Select parent (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="income">Income</SelectItem>
-                      <SelectItem value="expense">Expense</SelectItem>
+                      <SelectItem value="no-parent">No Parent (Root Category)</SelectItem>
+                      {flatCategories
+                        .filter((cat: any) => cat.id !== editingCategory?.id)
+                        .map((category: any) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="categoryDescription">Description</Label>
+                  <Input
+                    id="categoryDescription"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Optional description"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="categoryColor">Color</Label>
+                  <Input
+                    id="categoryColor"
+                    type="color"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                  />
+                </div>
+              </div>
+
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={resetCategoryForm}>
+                <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
                 <Button 
@@ -300,6 +380,31 @@ export function CategoriesSettings() {
           </CardContent>
         </Card>
       )}
+
+      {/* Categories Tree */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FolderTree className="h-5 w-5" />
+            Category Tree
+          </CardTitle>
+          <CardDescription>
+            Hierarchical view of all categories. Click the arrows to expand/collapse.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {categoryTree.length > 0 ? (
+              renderCategoryTree(categoryTree)
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <FolderTree className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No categories yet. Create your first category to get started.</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
