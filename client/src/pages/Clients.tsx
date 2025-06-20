@@ -524,6 +524,151 @@ export default function Clients() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Client Profile Modal */}
+      <Dialog open={isProfileModalOpen} onOpenChange={setIsProfileModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              {selectedClient?.name} - Client Profile
+            </DialogTitle>
+            <DialogDescription>
+              Detailed insights and financial data for this client
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedClient && (
+            <div className="space-y-6">
+              {/* Client Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Company Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Industry:</span>
+                      <span>{selectedClient.industry || "Not specified"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Email:</span>
+                      <span>{selectedClient.email}</span>
+                    </div>
+                    {selectedClient.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Phone:</span>
+                        <span>{selectedClient.phone}</span>
+                      </div>
+                    )}
+                    {selectedClient.website && (
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Website:</span>
+                        <span>{selectedClient.website}</span>
+                      </div>
+                    )}
+                    {selectedClient.address && (
+                      <div className="pt-2 border-t">
+                        <span className="font-medium">Address:</span>
+                        <p className="text-sm text-muted-foreground mt-1">{selectedClient.address}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Contact Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {selectedClient.contactName && (
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Contact Person:</span>
+                        <span>{selectedClient.contactName}</span>
+                      </div>
+                    )}
+                    {selectedClient.contactEmail && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Contact Email:</span>
+                        <span>{selectedClient.contactEmail}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Client Since:</span>
+                      <span>{new Date(selectedClient.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Financial Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Financial Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">$0</div>
+                      <div className="text-sm text-muted-foreground">Total Revenue</div>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">0</div>
+                      <div className="text-sm text-muted-foreground">Total Transactions</div>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-950 p-4 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600">$0</div>
+                      <div className="text-sm text-muted-foreground">Average Transaction</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Dashboard Access */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Eye className="h-5 w-5" />
+                    Client Dashboard Access
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => handleGenerateAuthToken(selectedClient)}
+                      disabled={generateAuthTokenMutation.isPending}
+                      className="flex-1"
+                    >
+                      {generateAuthTokenMutation.isPending ? "Generating..." : "Generate Access Token"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => openPermissionsModal(selectedClient)}
+                      className="flex-1"
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      Configure Permissions
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Generate a secure token to give this client access to their personalized dashboard
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
