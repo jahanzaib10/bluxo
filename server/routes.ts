@@ -987,7 +987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get reference data for mapping
-      const employees = await db
+      const organizationEmployees = await db
         .select()
         .from(employees)
         .where(eq(employees.organizationId, organizationId));
@@ -1022,7 +1022,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Find employee by email
           let employeeId = null;
           if (row.employee_email) {
-            const employee = employees.find(e => 
+            const employee = organizationEmployees.find(e => 
               e.email && normalizeText(e.email) === normalizeText(row.employee_email)
             );
             if (!employee) {

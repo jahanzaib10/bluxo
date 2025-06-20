@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, Search, Edit, Trash2, CreditCard } from "lucide-react";
+import { Plus, Upload, Search, Edit, Trash2, CreditCard, AlertTriangle, CheckCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CategorySelect } from "@/components/CategorySelect";
@@ -22,6 +24,9 @@ interface ExpenseRecord {
   categoryId?: string;
   categoryName?: string;
   description?: string;
+  isRecurring?: boolean;
+  recurringFrequency?: string;
+  recurringEndDate?: string;
   createdAt: string;
 }
 
@@ -31,6 +36,28 @@ interface FormData {
   employeeId: string;
   categoryId: string;
   description: string;
+  isRecurring: boolean;
+  recurringFrequency: string;
+  recurringEndDate: string;
+}
+
+interface CsvRow {
+  date: string;
+  amount: string;
+  description: string;
+  employee_email: string;
+  category_parent?: string;
+  category_name: string;
+  is_recurring: string;
+  recurring_frequency?: string;
+  recurring_end_date?: string;
+  [key: string]: string | undefined;
+}
+
+interface ValidationError {
+  row: number;
+  field: string;
+  message: string;
 }
 
 export default function Expenses() {
@@ -40,9 +67,12 @@ export default function Expenses() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [csvData, setCsvData] = useState("");
+  const [parsedData, setParsedData] = useState<CsvRow[]>([]);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   
   const [formData, setFormData] = useState<FormData>({
     amount: "",
@@ -50,6 +80,9 @@ export default function Expenses() {
     employeeId: "",
     categoryId: "",
     description: "",
+    isRecurring: false,
+    recurringFrequency: "",
+    recurringEndDate: ""
   });
 
   // Queries
@@ -129,6 +162,9 @@ export default function Expenses() {
       employeeId: "",
       categoryId: "",
       description: "",
+      isRecurring: false,
+      recurringFrequency: "",
+      recurringEndDate: ""
     });
   };
 
