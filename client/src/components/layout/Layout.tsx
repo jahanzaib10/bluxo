@@ -173,24 +173,26 @@ export function Layout({ children }: LayoutProps) {
           {/* Settings Submenu */}
           {(settingsExpanded || isSettingsPath()) && (
             <div className="ml-8 mt-1 space-y-1">
-              {settingsNavItems.map((item) => {
-                const isActive = isActivePath(item.path);
-                
-                return (
-                  <Link key={item.path} href={item.path}>
-                    <div
-                      className={cn(
-                        "px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer",
-                        isActive 
-                          ? "bg-slate-700 text-white" 
-                          : "text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-                      )}
-                    >
-                      {item.label}
-                    </div>
-                  </Link>
-                );
-              })}
+              {settingsNavItems
+                .filter(item => user?.role && item.roles.includes(user.role))
+                .map((item) => {
+                  const isActive = isActivePath(item.path);
+                  
+                  return (
+                    <Link key={item.path} href={item.path}>
+                      <div
+                        className={cn(
+                          "px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer",
+                          isActive 
+                            ? "bg-slate-700 text-white" 
+                            : "text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                        )}
+                      >
+                        {item.label}
+                      </div>
+                    </Link>
+                  );
+                })}
             </div>
           )}
         </div>
