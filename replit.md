@@ -231,6 +231,13 @@ Changelog:
   * Enhanced frontend table display with visual indentation and tree-like formatting
   * Added comprehensive parent_name validation and error handling during CSV import
   * Updated category forms and interfaces to support optional parent category selection
+- June 20, 2025. Comprehensive hierarchical category integration across entire application
+  * Created CategorySelect component with hierarchical display, proper indentation, and type filtering
+  * Replaced all hardcoded category selections throughout Income, Expenses, and Subscriptions pages
+  * Implemented cascading delete functionality with recursive category deletion and organization security
+  * Enhanced frontend feedback for category operations with detailed delete messages and notifications
+  * Successfully integrated hierarchical categories into all financial transaction forms and dashboard components
+  * Verified organization-based security ensuring users can only manage their own categories
 ```
 
 ## User Preferences

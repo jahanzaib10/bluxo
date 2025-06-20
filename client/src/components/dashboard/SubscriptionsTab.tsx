@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Calendar, CreditCard, Search, RotateCcw, DollarSign } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import { CategorySelect } from '@/components/CategorySelect';
 
 export function SubscriptionsTab() {
   const [showForm, setShowForm] = useState(false);
@@ -393,21 +394,12 @@ export function SubscriptionsTab() {
 
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
-                  <Select
+                  <CategorySelect
                     value={formData.categoryId}
                     onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.isArray(categories) && categories.map((category: any) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    type="expense"
+                    placeholder="Select subscription category"
+                  />
                 </div>
               </div>
 

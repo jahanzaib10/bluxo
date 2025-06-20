@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Edit, Trash2, CalendarDays, DollarSign, Repeat, Building2, User, Tag } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { insertSubscriptionSchema, type Subscription, type InsertSubscription } from "@shared/schema";
+import { CategorySelect } from "@/components/CategorySelect";
 
 export default function Subscriptions() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -515,20 +516,14 @@ function SubscriptionForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Category</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {categories.map((category: any) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <CategorySelect
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    type="expense"
+                    placeholder="Select subscription category"
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
