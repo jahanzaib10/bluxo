@@ -1,17 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building, Mail, CheckCircle, AlertCircle } from "lucide-react";
+import { Building, Mail, CheckCircle, AlertCircle, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function ClientPortal() {
   const [email, setEmail] = useState("");
+  const [token, setToken] = useState("");
+  const [hasTokenInUrl, setHasTokenInUrl] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const { toast } = useToast();
+
+  // Check for token in URL on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+    if (urlToken) {
+      setToken(urlToken);
+      setHasTokenInUrl(true);
+    }
+  }, []);
 
   const requestTokenMutation = useMutation({
     mutationFn: async (email: string) => {
@@ -33,17 +45,49 @@ export default function ClientPortal() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) {
+  const accessDashboardMutation = useMutation({
+    mutationFn: async (token: string) => {
+      return await apiRequest("/api/client-auth/verify", "POST", { token });
+    },
+    onSuccess: (data) => {
+      // Redirect to client dashboard with the validated data
+      window.location.href = `/client-dashboard?token=${token}`;
+    },
+    onError: (error: any) => {
       toast({
-        title: "Email Required",
-        description: "Please enter your email address.",
+        title: "Access Failed",
+        description: error.message || "Invalid or expired token. Please request a new one.",
         variant: "destructive",
       });
-      return;
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (hasTokenInUrl) {
+      // Handle token access
+      if (!token) {
+        toast({
+          title: "Token Required",
+          description: "Please enter your access token.",
+          variant: "destructive",
+        });
+        return;
+      }
+      accessDashboardMutation.mutate(token);
+    } else {
+      // Handle email request
+      if (!email) {
+        toast({
+          title: "Email Required",
+          description: "Please enter your email address.",
+          variant: "destructive",
+        });
+        return;
+      }
+      requestTokenMutation.mutate(email);
     }
-    requestTokenMutation.mutate(email);
   };
 
   if (requestSent) {
@@ -94,33 +138,57 @@ export default function ClientPortal() {
           </div>
           <CardTitle className="text-2xl">Client Portal</CardTitle>
           <CardDescription>
-            Enter your email address to request access to your financial dashboard
+            {hasTokenInUrl 
+              ? "Your access token has been detected. Click below to access your dashboard."
+              : "Enter your email address to request access to your financial dashboard"
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+            {hasTokenInUrl ? (
+              <div className="space-y-2">
+                <Label htmlFor="token">Access Token</Label>
+                <div className="relative">
+                  <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="token"
+                    type="text"
+                    placeholder="Your access token"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+            )}
             
             <Button 
               type="submit" 
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-              disabled={requestTokenMutation.isPending}
+              disabled={requestTokenMutation.isPending || accessDashboardMutation.isPending}
             >
-              {requestTokenMutation.isPending ? "Sending Request..." : "Request Access Token"}
+              {hasTokenInUrl 
+                ? (accessDashboardMutation.isPending ? "Accessing Dashboard..." : "Access Dashboard")
+                : (requestTokenMutation.isPending ? "Sending Request..." : "Request Access Token")
+              }
             </Button>
           </form>
 
