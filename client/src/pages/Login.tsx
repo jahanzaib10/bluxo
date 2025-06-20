@@ -33,7 +33,7 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormData) => {
-      return await apiRequest("POST", "/api/auth/login", data);
+      return await apiRequest("/api/auth/login", "POST", { username: data.email, password: data.password });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
