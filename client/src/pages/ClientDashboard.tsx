@@ -1,30 +1,14 @@
-import { Layout } from '@/components/layout/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from "@/components/ui/card";
 
-const ClientDashboard = () => {
+export default function ClientDashboard() {
   return (
-    <Layout>
-      <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Client Dashboard</h1>
-          <p className="text-muted-foreground">
-            Client-specific financial overview and reports
-          </p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Client Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center text-muted-foreground">
-              Client dashboard coming soon.
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </Layout>
+    <div className="p-6 space-y-6">
+      <h1 className="text-3xl font-bold">Client Dashboard</h1>
+      <Card>
+        <CardContent className="p-8 text-center">
+          <p className="text-gray-500">Client-specific dashboard coming soon.</p>
+        </CardContent>
+      </Card>
+    </div>
   );
-};
-
-export default ClientDashboard;
+}

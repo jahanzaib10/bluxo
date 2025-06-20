@@ -299,13 +299,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [newSubscription] = await db
         .insert(subscriptions)
         .values({
-          id: randomUUID(),
           name,
           amount,
           billingCycle,
           nextDueDate,
           organizationId,
-          createdAt: new Date(),
         })
         .returning();
       
