@@ -618,8 +618,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const processedCategories = [];
+      const skippedCategories = [];
       const errors = [];
-      const duplicateNames = new Set();
       
       // Get existing categories to check for duplicates and resolve parent relationships
       const existingCategories = await db
@@ -627,12 +627,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(categories)
         .where(eq(categories.organizationId, organizationId));
       
+      // Create maps for duplicate checking and parent resolution
       const existingCategoryMap = new Map();
       const existingCategoryNameMap = new Map();
       existingCategories.forEach(cat => {
-        existingCategoryMap.set(`${cat.name.toLowerCase()}_${cat.type}`, true);
+        // Key for duplicate detection: name + type (case-insensitive)
+        existingCategoryMap.set(`${cat.name.toLowerCase()}_${cat.type}`, cat);
+        // Map for parent resolution by name only
         existingCategoryNameMap.set(cat.name.toLowerCase(), cat);
       });
+      
+      // Track categories being imported to detect within-file duplicates
+      const importingCategoryMap = new Map();
       
       // First pass: collect all category names from import to build name-to-id mapping
       const importCategoryNameMap = new Map();
@@ -666,18 +672,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
         
-        // Check for duplicates within the batch
+        // Check for duplicates within the batch and database
         const categoryKey = `${name.toLowerCase()}_${type}`;
-        if (duplicateNames.has(categoryKey)) {
-          errors.push(`Row ${i + 1}: Duplicate category '${name}' with type '${type}' found in import data`);
+        
+        // Check if already exists in database
+        if (existingCategoryMap.has(categoryKey)) {
+          skippedCategories.push({
+            row: i + 1,
+            name,
+            type,
+            reason: 'Already exists in database'
+          });
           continue;
         }
         
-        // Check for existing categories in database
-        if (existingCategoryMap.has(categoryKey)) {
-          errors.push(`Row ${i + 1}: Category '${name}' with type '${type}' already exists`);
+        // Check for duplicates within current import batch
+        if (importingCategoryMap.has(categoryKey)) {
+          skippedCategories.push({
+            row: i + 1,
+            name,
+            type,
+            reason: 'Duplicate within import file'
+          });
           continue;
         }
+        
+        // Mark as being imported to prevent within-file duplicates
+        importingCategoryMap.set(categoryKey, true);
         
         // Resolve parent_id if parent_name is provided
         let parentId = null;
@@ -696,8 +717,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Note: We'll need to handle this in a second pass after inserting parent categories
           }
         }
-        
-        duplicateNames.add(categoryKey);
         
         processedCategories.push({
           name,
@@ -774,11 +793,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         insertedCategories = [...insertedTopLevel, ...insertedChildren];
       }
       
+      const totalProcessed = insertedCategories.length + skippedCategories.length + errors.length;
+      
       res.status(200).json({
-        message: `Successfully imported ${insertedCategories.length} of ${categoryData.length} categories`,
+        message: `Import completed: ${insertedCategories.length} imported, ${skippedCategories.length} skipped (duplicates), ${errors.length} errors`,
         imported: insertedCategories.length,
+        skipped: skippedCategories.length,
+        errors: errors.length,
         total: categoryData.length,
-        errors: errors.length > 0 ? errors : undefined,
+        skippedCategories: skippedCategories.length > 0 ? skippedCategories : undefined,
+        errorDetails: errors.length > 0 ? errors : undefined,
         categories: insertedCategories
       });
       
