@@ -1,0 +1,76 @@
+We are restarting from scratch.
+
+❌ DELETE:
+- All database tables except: `users`, `organizations`, `roles`, and existing auth/session logic
+- All frontend code, except for login/signup UI
+- All backend routes except authentication/session/user/org
+
+✅ REBUILD FROM SCRATCH:
+This is a SaaS for service-based IT companies to manage their finances.
+
+---
+
+📂 NEW POSTGRESQL SCHEMA
+
+1. `clients`: id, name, email, organization_id
+2. `employees`: id, name, job_title, email, organization_id
+3. `payment_sources`: id, name, type, organization_id
+4. `categories`: id, name, type (income/expense), parent_id (nullable), organization_id
+
+💵 **Income**
+- `income`: id, client_id, amount, date, payment_source_id, category_id, is_recurring (boolean), organization_id
+
+📤 **Expenses**
+- `spending`: id, amount, date, employee_id (nullable), category_id, notes, organization_id
+
+🔁 **Subscriptions**
+- `subscriptions`: id, name, amount, billing_cycle, next_due_date, category_id, organization_id
+
+📎 **Relationships**
+- income → client + payment_source + category
+- spending → employee (optional) + category
+- subscriptions → category
+
+All tables should include:
+- UUID primary keys
+- organization_id for data isolation
+- created_at timestamps
+- foreign key constraints
+
+---
+
+🧑‍💼 USER TYPES & DASHBOARDS
+- `users` table should include a `type` field: `internal` or `client`
+- Internal users see the full app
+- Client users should be routed to a `/client-dashboard` route
+   - They can only view income/expenses related to their linked `client_id`
+   - View-only mode
+
+---
+
+🛠️ FRONTEND REBUILD
+- New layout with collapsible, nested sidebar
+- Light/dark theme toggle (default: light)
+- Logout in header
+- Pages:
+   - `/dashboard` (KPI cards, trends)
+   - `/income`
+   - `/expenses`
+   - `/subscriptions`
+   - `/clients`
+   - `/employees`
+   - `/settings/categories`
+   - `/settings/payment-sources`
+   - `/settings/user-management`
+   - `/client-dashboard` (for view-only client user)
+
+Use React + TypeScript + Tailwind + TanStack Query.
+
+---
+
+📥 DATA MIGRATION
+I will upload CSVs for: clients, employees, income, spending, subscriptions, categories, payment_sources
+
+Please prepare SQL schema and helper scripts to ingest these CSVs into the new tables with correct relationships and organization_id.
+
+DO NOT touch the existing auth/session/login/signup functionality.

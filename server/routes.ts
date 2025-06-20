@@ -1,361 +1,414 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import cookieParser from "cookie-parser";
-import { 
-  authenticateToken, 
-  requireRole,
-  type AuthRequest, 
-  login, 
-  signup, 
-  logout, 
-  getCurrentUser,
-  inviteUser,
-  acceptInvitation
-} from "./enterprise-auth";
 import { db } from "./db";
 import { 
-  organizations, 
-  users, 
-  userInvitations,
-  categories, 
-  clients, 
-  employees, 
-  developers,
-  income,
-  spending,
-  subscriptions,
-  paymentSources,
-  insertOrganizationSchema,
-  insertUserSchema,
-  insertUserInvitationSchema
+  clients, employees, paymentSources, categories, 
+  income, spending, subscriptions,
+  insertClientSchema, insertEmployeeSchema, insertPaymentSourceSchema,
+  insertCategorySchema, insertIncomeSchema, insertSpendingSchema,
+  insertSubscriptionSchema
 } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
 
+// Mock authentication middleware (replace with actual auth)
+const requireAuth = (req: any, res: any, next: any) => {
+  // Mock organization ID for development
+  req.user = { 
+    organizationId: "550e8400-e29b-41d4-a716-446655440000",
+    type: "internal"
+  };
+  next();
+};
+
+const requireClientAuth = (req: any, res: any, next: any) => {
+  if (req.user?.type === "client") {
+    req.isClientUser = true;
+  }
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Add cookie parser middleware
-  app.use(cookieParser());
-
-  // Authentication routes (unprotected)
-  app.post("/api/auth/login", login);
-  app.post("/api/auth/signup", signup);
-  app.post("/api/auth/logout", logout);
-  app.get("/api/auth/me", authenticateToken, getCurrentUser);
-  // Protected Accounts routes
-  app.get("/api/accounts", authenticateToken, async (req: AuthRequest, res) => {
+  
+  // CLIENTS ROUTES
+  app.get("/api/clients", requireAuth, async (req: any, res) => {
     try {
-      const accounts = await storage.getAccounts();
-      res.json(accounts);
+      const clientsList = await db.select()
+        .from(clients)
+        .where(eq(clients.organizationId, req.user.organizationId))
+        .orderBy(desc(clients.createdAt));
+      
+      res.json(clientsList);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch accounts" });
-    }
-  });
-
-  app.get("/api/accounts/:id", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const account = await storage.getAccount(req.params.id);
-      if (!account) {
-        return res.status(404).json({ message: "Account not found" });
-      }
-      res.json(account);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch account" });
-    }
-  });
-
-  app.post("/api/accounts", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const validatedData = insertAccountSchema.parse({
-        ...req.body,
-        created_by: req.user?.id
-      });
-      const account = await storage.createAccount(validatedData);
-      res.status(201).json(account);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create account" });
-    }
-  });
-
-  app.put("/api/accounts/:id", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const validatedData = insertAccountSchema.partial().parse(req.body);
-      const account = await storage.updateAccount(req.params.id, validatedData);
-      if (!account) {
-        return res.status(404).json({ message: "Account not found" });
-      }
-      res.json(account);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update account" });
-    }
-  });
-
-  app.delete("/api/accounts/:id", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const deleted = await storage.deleteAccount(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Account not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete account" });
-    }
-  });
-
-  // Protected Categories routes
-  app.get("/api/categories", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const categories = await storage.getCategories();
-      res.json(categories);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch categories" });
-    }
-  });
-
-  app.get("/api/categories/:id", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const category = await storage.getCategory(req.params.id);
-      if (!category) {
-        return res.status(404).json({ message: "Category not found" });
-      }
-      res.json(category);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch category" });
-    }
-  });
-
-  app.post("/api/categories", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const validatedData = insertCategorySchema.parse(req.body);
-      const category = await storage.createCategory(validatedData);
-      res.status(201).json(category);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create category" });
-    }
-  });
-
-  app.put("/api/categories/:id", async (req, res) => {
-    try {
-      const validatedData = insertCategorySchema.partial().parse(req.body);
-      const category = await storage.updateCategory(req.params.id, validatedData);
-      if (!category) {
-        return res.status(404).json({ message: "Category not found" });
-      }
-      res.json(category);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update category" });
-    }
-  });
-
-  app.delete("/api/categories/:id", async (req, res) => {
-    try {
-      const deleted = await storage.deleteCategory(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Category not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete category" });
-    }
-  });
-
-  // Clients routes
-  app.get("/api/clients", async (req, res) => {
-    try {
-      const clients = await storage.getClients();
-      res.json(clients);
-    } catch (error) {
+      console.error("Error fetching clients:", error);
       res.status(500).json({ message: "Failed to fetch clients" });
     }
   });
 
-  app.get("/api/clients/:id", async (req, res) => {
+  app.post("/api/clients", requireAuth, async (req: any, res) => {
     try {
-      const client = await storage.getClient(req.params.id);
-      if (!client) {
-        return res.status(404).json({ message: "Client not found" });
-      }
-      res.json(client);
+      const validatedData = insertClientSchema.parse({
+        ...req.body,
+        organizationId: req.user.organizationId
+      });
+      
+      const [newClient] = await db.insert(clients)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newClient);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch client" });
-    }
-  });
-
-  app.post("/api/clients", async (req, res) => {
-    try {
-      const validatedData = insertClientSchema.parse(req.body);
-      const client = await storage.createClient(validatedData);
-      res.status(201).json(client);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
+      console.error("Error creating client:", error);
       res.status(500).json({ message: "Failed to create client" });
     }
   });
 
-  app.put("/api/clients/:id", async (req, res) => {
+  app.put("/api/clients/:id", requireAuth, async (req: any, res) => {
     try {
+      const { id } = req.params;
       const validatedData = insertClientSchema.partial().parse(req.body);
-      const client = await storage.updateClient(req.params.id, validatedData);
-      if (!client) {
+      
+      const [updatedClient] = await db.update(clients)
+        .set(validatedData)
+        .where(and(
+          eq(clients.id, id),
+          eq(clients.organizationId, req.user.organizationId)
+        ))
+        .returning();
+      
+      if (!updatedClient) {
         return res.status(404).json({ message: "Client not found" });
       }
-      res.json(client);
+      
+      res.json(updatedClient);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
+      console.error("Error updating client:", error);
       res.status(500).json({ message: "Failed to update client" });
     }
   });
 
-  app.delete("/api/clients/:id", async (req, res) => {
+  app.delete("/api/clients/:id", requireAuth, async (req: any, res) => {
     try {
-      const deleted = await storage.deleteClient(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Client not found" });
-      }
+      const { id } = req.params;
+      
+      await db.delete(clients)
+        .where(and(
+          eq(clients.id, id),
+          eq(clients.organizationId, req.user.organizationId)
+        ));
+      
       res.status(204).send();
     } catch (error) {
+      console.error("Error deleting client:", error);
       res.status(500).json({ message: "Failed to delete client" });
     }
   });
 
-  // Developers routes
-  app.get("/api/developers", async (req, res) => {
+  // EMPLOYEES ROUTES
+  app.get("/api/employees", requireAuth, async (req: any, res) => {
     try {
-      const developers = await storage.getDevelopers();
-      res.json(developers);
+      const employeesList = await db.select()
+        .from(employees)
+        .where(eq(employees.organizationId, req.user.organizationId))
+        .orderBy(desc(employees.createdAt));
+      
+      res.json(employeesList);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch developers" });
-    }
-  });
-
-  app.get("/api/developers/:id", async (req, res) => {
-    try {
-      const developer = await storage.getDeveloper(req.params.id);
-      if (!developer) {
-        return res.status(404).json({ message: "Developer not found" });
-      }
-      res.json(developer);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch developer" });
-    }
-  });
-
-  app.post("/api/developers", async (req, res) => {
-    try {
-      const validatedData = insertDeveloperSchema.parse(req.body);
-      const developer = await storage.createDeveloper(validatedData);
-      res.status(201).json(developer);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create developer" });
-    }
-  });
-
-  app.put("/api/developers/:id", async (req, res) => {
-    try {
-      const validatedData = insertDeveloperSchema.partial().parse(req.body);
-      const developer = await storage.updateDeveloper(req.params.id, validatedData);
-      if (!developer) {
-        return res.status(404).json({ message: "Developer not found" });
-      }
-      res.json(developer);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update developer" });
-    }
-  });
-
-  app.delete("/api/developers/:id", async (req, res) => {
-    try {
-      const deleted = await storage.deleteDeveloper(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Developer not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete developer" });
-    }
-  });
-
-  // Employees routes
-  app.get("/api/employees", async (req, res) => {
-    try {
-      const employees = await storage.getEmployees();
-      res.json(employees);
-    } catch (error) {
+      console.error("Error fetching employees:", error);
       res.status(500).json({ message: "Failed to fetch employees" });
     }
   });
 
-  app.get("/api/employees/:id", async (req, res) => {
+  app.post("/api/employees", requireAuth, async (req: any, res) => {
     try {
-      const employee = await storage.getEmployee(req.params.id);
-      if (!employee) {
-        return res.status(404).json({ message: "Employee not found" });
-      }
-      res.json(employee);
+      const validatedData = insertEmployeeSchema.parse({
+        ...req.body,
+        organizationId: req.user.organizationId
+      });
+      
+      const [newEmployee] = await db.insert(employees)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newEmployee);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch employee" });
-    }
-  });
-
-  app.post("/api/employees", async (req, res) => {
-    try {
-      const validatedData = insertEmployeeSchema.parse(req.body);
-      const employee = await storage.createEmployee(validatedData);
-      res.status(201).json(employee);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
+      console.error("Error creating employee:", error);
       res.status(500).json({ message: "Failed to create employee" });
     }
   });
 
-  app.put("/api/employees/:id", async (req, res) => {
+  // PAYMENT SOURCES ROUTES
+  app.get("/api/payment-sources", requireAuth, async (req: any, res) => {
     try {
-      const validatedData = insertEmployeeSchema.partial().parse(req.body);
-      const employee = await storage.updateEmployee(req.params.id, validatedData);
-      if (!employee) {
-        return res.status(404).json({ message: "Employee not found" });
-      }
-      res.json(employee);
+      const sources = await db.select()
+        .from(paymentSources)
+        .where(eq(paymentSources.organizationId, req.user.organizationId))
+        .orderBy(desc(paymentSources.createdAt));
+      
+      res.json(sources);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update employee" });
+      console.error("Error fetching payment sources:", error);
+      res.status(500).json({ message: "Failed to fetch payment sources" });
     }
   });
 
-  app.delete("/api/employees/:id", async (req, res) => {
+  app.post("/api/payment-sources", requireAuth, async (req: any, res) => {
     try {
-      const deleted = await storage.deleteEmployee(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Employee not found" });
-      }
-      res.status(204).send();
+      const validatedData = insertPaymentSourceSchema.parse({
+        ...req.body,
+        organizationId: req.user.organizationId
+      });
+      
+      const [newSource] = await db.insert(paymentSources)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newSource);
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete employee" });
+      console.error("Error creating payment source:", error);
+      res.status(500).json({ message: "Failed to create payment source" });
+    }
+  });
+
+  // CATEGORIES ROUTES
+  app.get("/api/categories", requireAuth, async (req: any, res) => {
+    try {
+      const categoriesList = await db.select()
+        .from(categories)
+        .where(eq(categories.organizationId, req.user.organizationId))
+        .orderBy(desc(categories.createdAt));
+      
+      res.json(categoriesList);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      res.status(500).json({ message: "Failed to fetch categories" });
+    }
+  });
+
+  app.post("/api/categories", requireAuth, async (req: any, res) => {
+    try {
+      const validatedData = insertCategorySchema.parse({
+        ...req.body,
+        organizationId: req.user.organizationId
+      });
+      
+      const [newCategory] = await db.insert(categories)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error("Error creating category:", error);
+      res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+
+  // INCOME ROUTES
+  app.get("/api/income", requireAuth, requireClientAuth, async (req: any, res) => {
+    try {
+      let query = db.select({
+        id: income.id,
+        amount: income.amount,
+        date: income.date,
+        description: income.description,
+        isRecurring: income.isRecurring,
+        client: {
+          id: clients.id,
+          name: clients.name,
+          email: clients.email
+        },
+        paymentSource: {
+          id: paymentSources.id,
+          name: paymentSources.name,
+          type: paymentSources.type
+        },
+        category: {
+          id: categories.id,
+          name: categories.name,
+          type: categories.type
+        }
+      })
+      .from(income)
+      .leftJoin(clients, eq(income.clientId, clients.id))
+      .leftJoin(paymentSources, eq(income.paymentSourceId, paymentSources.id))
+      .leftJoin(categories, eq(income.categoryId, categories.id))
+      .where(eq(income.organizationId, req.user.organizationId));
+
+      // If client user, filter by their client_id
+      if (req.isClientUser && req.user.clientId) {
+        query = query.where(eq(income.clientId, req.user.clientId));
+      }
+
+      const incomeList = await query.orderBy(desc(income.date));
+      
+      res.json(incomeList);
+    } catch (error) {
+      console.error("Error fetching income:", error);
+      res.status(500).json({ message: "Failed to fetch income" });
+    }
+  });
+
+  app.post("/api/income", requireAuth, async (req: any, res) => {
+    try {
+      const validatedData = insertIncomeSchema.parse({
+        ...req.body,
+        organizationId: req.user.organizationId
+      });
+      
+      const [newIncome] = await db.insert(income)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newIncome);
+    } catch (error) {
+      console.error("Error creating income:", error);
+      res.status(500).json({ message: "Failed to create income" });
+    }
+  });
+
+  // SPENDING ROUTES
+  app.get("/api/spending", requireAuth, requireClientAuth, async (req: any, res) => {
+    try {
+      let query = db.select({
+        id: spending.id,
+        amount: spending.amount,
+        date: spending.date,
+        notes: spending.notes,
+        employee: {
+          id: employees.id,
+          name: employees.name,
+          jobTitle: employees.jobTitle
+        },
+        category: {
+          id: categories.id,
+          name: categories.name,
+          type: categories.type
+        }
+      })
+      .from(spending)
+      .leftJoin(employees, eq(spending.employeeId, employees.id))
+      .leftJoin(categories, eq(spending.categoryId, categories.id))
+      .where(eq(spending.organizationId, req.user.organizationId));
+
+      // Client users see limited spending data
+      if (req.isClientUser) {
+        // Could filter spending related to client projects, etc.
+      }
+
+      const spendingList = await query.orderBy(desc(spending.date));
+      
+      res.json(spendingList);
+    } catch (error) {
+      console.error("Error fetching spending:", error);
+      res.status(500).json({ message: "Failed to fetch spending" });
+    }
+  });
+
+  app.post("/api/spending", requireAuth, async (req: any, res) => {
+    try {
+      const validatedData = insertSpendingSchema.parse({
+        ...req.body,
+        organizationId: req.user.organizationId
+      });
+      
+      const [newSpending] = await db.insert(spending)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newSpending);
+    } catch (error) {
+      console.error("Error creating spending:", error);
+      res.status(500).json({ message: "Failed to create spending" });
+    }
+  });
+
+  // SUBSCRIPTIONS ROUTES
+  app.get("/api/subscriptions", requireAuth, async (req: any, res) => {
+    try {
+      const subscriptionsList = await db.select({
+        id: subscriptions.id,
+        name: subscriptions.name,
+        amount: subscriptions.amount,
+        billingCycle: subscriptions.billingCycle,
+        nextDueDate: subscriptions.nextDueDate,
+        category: {
+          id: categories.id,
+          name: categories.name,
+          type: categories.type
+        }
+      })
+      .from(subscriptions)
+      .leftJoin(categories, eq(subscriptions.categoryId, categories.id))
+      .where(eq(subscriptions.organizationId, req.user.organizationId))
+      .orderBy(desc(subscriptions.nextDueDate));
+      
+      res.json(subscriptionsList);
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+      res.status(500).json({ message: "Failed to fetch subscriptions" });
+    }
+  });
+
+  app.post("/api/subscriptions", requireAuth, async (req: any, res) => {
+    try {
+      const validatedData = insertSubscriptionSchema.parse({
+        ...req.body,
+        organizationId: req.user.organizationId
+      });
+      
+      const [newSubscription] = await db.insert(subscriptions)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newSubscription);
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+      res.status(500).json({ message: "Failed to create subscription" });
+    }
+  });
+
+  // DASHBOARD STATS
+  app.get("/api/dashboard/stats", requireAuth, requireClientAuth, async (req: any, res) => {
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      
+      // Get income stats
+      let incomeQuery = db.select()
+        .from(income)
+        .where(eq(income.organizationId, req.user.organizationId));
+      
+      if (req.isClientUser && req.user.clientId) {
+        incomeQuery = incomeQuery.where(eq(income.clientId, req.user.clientId));
+      }
+      
+      const incomeData = await incomeQuery;
+      
+      // Get spending stats  
+      const spendingData = await db.select()
+        .from(spending)
+        .where(eq(spending.organizationId, req.user.organizationId));
+      
+      // Calculate totals
+      const totalIncome = incomeData.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+      const totalSpending = spendingData.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+      const monthlyIncome = incomeData
+        .filter(item => item.date.startsWith(currentMonth))
+        .reduce((sum, item) => sum + parseFloat(item.amount), 0);
+      const monthlySpending = spendingData
+        .filter(item => item.date.startsWith(currentMonth))
+        .reduce((sum, item) => sum + parseFloat(item.amount), 0);
+      
+      res.json({
+        totalIncome,
+        totalSpending,
+        monthlyIncome,
+        monthlySpending,
+        netIncome: totalIncome - totalSpending,
+        monthlyNet: monthlyIncome - monthlySpending
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });
 

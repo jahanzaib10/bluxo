@@ -1,145 +1,49 @@
-
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import { AuthProvider } from "@/components/auth/AuthProvider";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
-import InviteAcceptance from "./pages/InviteAcceptance";
-import DebugInvitation from "./pages/DebugInvitation";
-import NotFound from "./pages/NotFound";
-import { Settings } from "./pages/settings/Settings";
-import Clients from "./pages/clients";
-import Employees from "./pages/employees";
-import CategoriesSettingsPage from "./pages/settings/categories";
-import { PaymentSourcesSettings } from "./pages/settings/PaymentSourcesSettings";
-import { UserManagementSettings } from "./pages/settings/UserManagementSettings";
 import { queryClient } from "./lib/queryClient";
+
+// Import new simplified pages
+import Dashboard from "./pages/Dashboard";
+import Income from "./pages/Income";
+import Expenses from "./pages/Expenses";
+import Subscriptions from "./pages/Subscriptions";
+import Clients from "./pages/Clients";
+import Employees from "./pages/Employees";
+import Categories from "./pages/settings/Categories";
+import PaymentSources from "./pages/settings/PaymentSources";
+import UserManagement from "./pages/settings/UserManagement";
+import ClientDashboard from "./pages/ClientDashboard";
+import NotFound from "./pages/NotFound";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <ThemeProvider defaultTheme="light" storageKey="finance-saas-theme">
         <Toaster />
-        <Sonner />
         <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              {/* Authentication routes */}
-              <Route path="/auth/login" element={<Login />} />
-              <Route path="/auth/signup" element={<Signup />} />
-              
-              {/* Root route - redirect based on auth status */}
-              <Route path="/" element={<Index />} />
-              <Route path="/invite/:token" element={<InviteAcceptance />} />
-              <Route path="/debug-invitation" element={<DebugInvitation />} />
-              
-              {/* Settings routes - individual page components */}
-              <Route 
-                path="/settings" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <Settings />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/settings/categories" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <CategoriesSettingsPage />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/settings/payment-sources" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <PaymentSourcesSettings />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/settings/user-management" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <UserManagementSettings />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* Page-level routes for individual components */}
-              <Route 
-                path="/clients" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <Clients />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/employees" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <Employees />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* Dashboard routes */}
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <Dashboard tab="overview" />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/overview" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <Dashboard tab="overview" />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/finance" 
-                element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <Dashboard tab="finance" />
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
+          <Routes>
+            {/* Main application routes */}
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/income" element={<Income />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/employees" element={<Employees />} />
+            
+            {/* Settings routes */}
+            <Route path="/settings/categories" element={<Categories />} />
+            <Route path="/settings/payment-sources" element={<PaymentSources />} />
+            <Route path="/settings/user-management" element={<UserManagement />} />
+            
+            {/* Client dashboard for client users */}
+            <Route path="/client-dashboard" element={<ClientDashboard />} />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </ThemeProvider>
     </TooltipProvider>
