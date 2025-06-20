@@ -1,0 +1,119 @@
+Please create the full PostgreSQL schema for my finance SaaS from scratch.
+
+Do NOT import any data yet. Just build the schema only.
+
+Here is the structure:
+
+-- ORGANIZATIONS & USERS
+
+CREATE TABLE organizations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT DEFAULT 'member',
+    type TEXT CHECK (type IN ('internal', 'client')) DEFAULT 'internal',
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CLIENTS & EMPLOYEES
+
+CREATE TABLE clients (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT,
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE employees (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT,
+    position TEXT,
+    country TEXT,
+    start_date DATE,
+    end_date DATE,
+    status TEXT DEFAULT 'active',
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- FINANCE TABLES
+
+CREATE TABLE payment_sources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    type TEXT,
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    type TEXT CHECK (type IN ('income', 'expense')) NOT NULL,
+    parent_id UUID REFERENCES categories(id),
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE income (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    amount DECIMAL(12,2) NOT NULL,
+    description TEXT,
+    date DATE NOT NULL,
+    client_id UUID REFERENCES clients(id),
+    payment_source_id UUID REFERENCES payment_sources(id),
+    category_id UUID REFERENCES categories(id),
+    is_recurring BOOLEAN DEFAULT FALSE,
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE expenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    amount DECIMAL(12,2) NOT NULL,
+    description TEXT,
+    date DATE NOT NULL,
+    employee_id UUID REFERENCES employees(id),
+    category_id UUID REFERENCES categories(id),
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    billing_cycle TEXT,
+    next_due_date DATE,
+    category_id UUID REFERENCES categories(id),
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+Please create these tables inside Replit's PostgreSQL instance.
+
+Do not rewrite or remove existing auth/session/login/signup code.
+
+---
+
+✅ QA Test Cases:
+- Use Replit SQL console to verify that each table exists
+- Check that `organization_id` exists in all tables
+- Attempt inserting rows with missing foreign keys → should fail
+- Try joining income → clients, expenses → employees, etc.
+
+📘 Swagger Docs:
+- None needed yet — this is schema only
+
+🔁 Regression Protection:
+- Ensure that existing login/signup/authentication continues to work
+- Don’t remove or rewrite any frontend logic unrelated to schema creation
