@@ -1,117 +1,112 @@
-import { pgTable, text, uuid, timestamp, boolean, numeric, date, integer } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  varchar,
+  timestamp,
+  uuid,
+  decimal,
+  date,
+  jsonb,
+  index,
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Keep existing auth tables (per requirements)
+// Session storage table for authentication
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// Core tables
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  type: text("type").notNull().default("internal"), // internal or client
-  clientId: uuid("client_id"), // populated when type is "client"
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  password: text("password").notNull(),
-  role: text("role").notNull(), // super_admin, admin, manager, employee, viewer
-  status: text("status").notNull().default("active"), // active, inactive, pending
-  emailVerified: boolean("email_verified").default(false),
+  id: varchar("id").primaryKey().notNull(),
+  email: varchar("email").unique(),
+  name: varchar("name"),
+  profileImageUrl: varchar("profile_image_url"),
+  organizationId: uuid("organization_id").references(() => organizations.id),
+  role: varchar("role").default("member"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// NEW CORE BUSINESS TABLES
-
-// Clients table
 export const clients = pgTable("clients", {
   id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  email: text("email"),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email"),
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Employees table
 export const employees = pgTable("employees", {
   id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  jobTitle: text("job_title"),
-  email: text("email"),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email"),
+  position: varchar("position"),
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Payment sources table
-export const paymentSources = pgTable("payment_sources", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  type: text("type").notNull(), // bank_account, credit_card, paypal, etc.
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Categories table
 export const categories = pgTable("categories", {
   id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  type: text("type").notNull(), // income or expense
-  parentId: uuid("parent_id").references(() => categories.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type").notNull(), // "income" or "expense"
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Income table
 export const income = pgTable("income", {
   id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  clientId: uuid("client_id").notNull().references(() => clients.id),
-  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
-  date: date("date").notNull(),
-  paymentSourceId: uuid("payment_source_id").references(() => paymentSources.id),
-  categoryId: uuid("category_id").references(() => categories.id),
-  isRecurring: boolean("is_recurring").default(false),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   description: text("description"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Spending table
-export const spending = pgTable("spending", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
   date: date("date").notNull(),
-  employeeId: uuid("employee_id").references(() => employees.id), // nullable
+  clientId: uuid("client_id").references(() => clients.id),
   categoryId: uuid("category_id").references(() => categories.id),
-  notes: text("notes"),
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Subscriptions table
+export const expenses = pgTable("expenses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  description: text("description"),
+  date: date("date").notNull(),
+  employeeId: uuid("employee_id").references(() => employees.id),
+  categoryId: uuid("category_id").references(() => categories.id),
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const subscriptions = pgTable("subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
-  billingCycle: text("billing_cycle").notNull(), // monthly, quarterly, yearly
+  name: varchar("name", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  billingCycle: varchar("billing_cycle").notNull(), // "monthly", "yearly"
   nextDueDate: date("next_due_date").notNull(),
-  categoryId: uuid("category_id").references(() => categories.id),
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// RELATIONS
+// Relations
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   users: many(users),
   clients: many(clients),
   employees: many(employees),
-  paymentSources: many(paymentSources),
   categories: many(categories),
   income: many(income),
-  spending: many(spending),
+  expenses: many(expenses),
   subscriptions: many(subscriptions),
 }));
 
@@ -119,10 +114,6 @@ export const usersRelations = relations(users, ({ one }) => ({
   organization: one(organizations, {
     fields: [users.organizationId],
     references: [organizations.id],
-  }),
-  client: one(clients, {
-    fields: [users.clientId],
-    references: [clients.id],
   }),
 }));
 
@@ -139,7 +130,7 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
     fields: [employees.organizationId],
     references: [organizations.id],
   }),
-  spending: many(spending),
+  expenses: many(expenses),
 }));
 
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
@@ -147,22 +138,8 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
     fields: [categories.organizationId],
     references: [organizations.id],
   }),
-  parent: one(categories, {
-    fields: [categories.parentId],
-    references: [categories.id],
-  }),
-  children: many(categories),
   income: many(income),
-  spending: many(spending),
-  subscriptions: many(subscriptions),
-}));
-
-export const paymentSourcesRelations = relations(paymentSources, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [paymentSources.organizationId],
-    references: [organizations.id],
-  }),
-  income: many(income),
+  expenses: many(expenses),
 }));
 
 export const incomeRelations = relations(income, ({ one }) => ({
@@ -174,27 +151,23 @@ export const incomeRelations = relations(income, ({ one }) => ({
     fields: [income.clientId],
     references: [clients.id],
   }),
-  paymentSource: one(paymentSources, {
-    fields: [income.paymentSourceId],
-    references: [paymentSources.id],
-  }),
   category: one(categories, {
     fields: [income.categoryId],
     references: [categories.id],
   }),
 }));
 
-export const spendingRelations = relations(spending, ({ one }) => ({
+export const expensesRelations = relations(expenses, ({ one }) => ({
   organization: one(organizations, {
-    fields: [spending.organizationId],
+    fields: [expenses.organizationId],
     references: [organizations.id],
   }),
   employee: one(employees, {
-    fields: [spending.employeeId],
+    fields: [expenses.employeeId],
     references: [employees.id],
   }),
   category: one(categories, {
-    fields: [spending.categoryId],
+    fields: [expenses.categoryId],
     references: [categories.id],
   }),
 }));
@@ -204,54 +177,64 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
     fields: [subscriptions.organizationId],
     references: [organizations.id],
   }),
-  category: one(categories, {
-    fields: [subscriptions.categoryId],
-    references: [categories.id],
-  }),
 }));
 
-// ZOD SCHEMAS
-export const insertClientSchema = createInsertSchema(clients).omit({
-  id: true,
-  createdAt: true,
+// Input validation schemas (without organizationId for client-side)
+export const insertClientSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email().optional(),
 });
 
-export const insertEmployeeSchema = createInsertSchema(employees).omit({
-  id: true,
-  createdAt: true,
+export const insertEmployeeSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email().optional(),
+  position: z.string().optional(),
 });
 
-export const insertCategorySchema = createInsertSchema(categories).omit({
-  id: true,
-  createdAt: true,
+export const insertCategorySchema = z.object({
+  name: z.string().min(1),
+  type: z.enum(["income", "expense"]),
 });
 
-export const insertIncomeSchema = createInsertSchema(income).omit({
-  id: true,
-  createdAt: true,
+export const insertIncomeSchema = z.object({
+  amount: z.string(),
+  description: z.string().optional(),
+  date: z.string(),
+  clientId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().optional(),
 });
 
-export const insertExpenseSchema = createInsertSchema(expenses).omit({
-  id: true,
-  createdAt: true,
+export const insertExpenseSchema = z.object({
+  amount: z.string(),
+  description: z.string().optional(),
+  date: z.string(),
+  employeeId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().optional(),
 });
 
-export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
-  id: true,
-  createdAt: true,
+export const insertSubscriptionSchema = z.object({
+  name: z.string().min(1),
+  amount: z.string(),
+  billingCycle: z.enum(["monthly", "yearly"]),
+  nextDueDate: z.string(),
 });
 
-// TYPES
+// User schema for Replit Auth compatibility
+export const upsertUserSchema = createInsertSchema(users).partial().extend({
+  id: z.string(),
+});
+
+// Types
 export type Organization = typeof organizations.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
-export type PaymentSource = typeof paymentSources.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Income = typeof income.$inferSelect;
-export type Spending = typeof spending.$inferSelect;
+export type Expense = typeof expenses.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 
+export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
