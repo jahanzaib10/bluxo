@@ -34,25 +34,31 @@ import {
 import { insertUserInvitationSchema, updateUserRoleSchema, updateUserStatusSchema } from "@shared/schema";
 import type { User, UserInvitation, InsertUserInvitation, UpdateUserRole, UpdateUserStatus } from "@shared/schema";
 import { z } from "zod";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function UserManagement() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState("users");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   
-  // Current logged-in user ID (from mock auth)
-  const CURRENT_USER_ID = "owner-user-id";
-  const CURRENT_USER_EMAIL = "jay@dartnox.com";
+  // Current logged-in user ID and email from actual auth
+  const CURRENT_USER_ID = currentUser?.id;
+  const CURRENT_USER_EMAIL = currentUser?.email;
 
   // Fetch users
   const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
+    staleTime: 0, // Always refetch fresh data
+    refetchOnMount: true,
   });
 
   // Fetch invitations
   const { data: invitations = [], isLoading: invitationsLoading } = useQuery<UserInvitation[]>({
     queryKey: ["/api/user-invitations"],
+    staleTime: 0, // Always refetch fresh data
+    refetchOnMount: true,
   });
 
   // Invite user form
