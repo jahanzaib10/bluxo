@@ -512,8 +512,8 @@ export default function Clients() {
                 </Button>
                 <Button
                   onClick={() => {
-                    const clientDashboardUrl = `/client-dashboard?token=${authToken}`;
-                    window.open(clientDashboardUrl, '_blank');
+                    const clientPortalUrl = `/client-portal?token=${authToken}`;
+                    window.open(clientPortalUrl, '_blank');
                   }}
                   className="flex-1"
                 >
