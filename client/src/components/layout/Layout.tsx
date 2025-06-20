@@ -16,10 +16,10 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  FolderTree,
-  CreditCard
+  X
 } from 'lucide-react';
 import { useTheme } from '@/components/theme/ThemeProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -33,17 +33,13 @@ const mainNavItems = [
   { path: '/subscriptions', label: 'Subscriptions', icon: RotateCcw },
   { path: '/clients', label: 'Clients', icon: Users },
   { path: '/employees', label: 'Employees', icon: UserCheck },
-];
-
-const settingsNavItems = [
-  { path: '/settings/categories', label: 'Categories', icon: FolderTree },
-  { path: '/settings/payment-sources', label: 'Payment Sources', icon: CreditCard },
-  { path: '/settings/user-management', label: 'User Management', icon: Settings },
+  { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
   const [location] = useLocation();
 
   const isActivePath = (path: string) => {
@@ -51,19 +47,41 @@ export function Layout({ children }: LayoutProps) {
     return location === path || (path !== '/dashboard' && location.startsWith(path));
   };
 
+  const handleLogout = () => {
+    // Clear localStorage and cookies
+    localStorage.removeItem('authToken');
+    document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    // Reload to trigger redirect to login
+    window.location.reload();
+  };
+
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <div className="flex h-full flex-col">
-      {/* Logo */}
+      {/* Logo and Collapse Button */}
       <div className="flex h-16 items-center border-b px-6">
         <div className="flex items-center gap-2 flex-1">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <TrendingUp className="h-4 w-4" />
           </div>
           {(!sidebarCollapsed || mobile) && (
-            <span className="text-lg font-semibold">FinanceSaaS</span>
+            <span className="text-lg font-semibold">FIN</span>
           )}
         </div>
-
+        {/* Collapse Button - Top Right */}
+        {!mobile && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="h-8 w-8 p-0"
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <X className="h-4 w-4" />
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -95,42 +113,73 @@ export function Layout({ children }: LayoutProps) {
             );
           })}
         </div>
-
-        {/* Settings Section */}
-        <div className="pt-4">
-          {(!sidebarCollapsed || mobile) && (
-            <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Settings
-            </h3>
-          )}
-          <div className="space-y-1">
-            {settingsNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = isActivePath(item.path);
-              
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "flex items-center rounded-lg text-sm font-medium transition-colors",
-                    sidebarCollapsed && !mobile 
-                      ? "justify-center px-2 py-2" 
-                      : "gap-3 px-3 py-2",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  )}
-                  title={sidebarCollapsed && !mobile ? item.label : undefined}
-                >
-                  <Icon className="h-4 w-4" />
-                  {(!sidebarCollapsed || mobile) && <span>{item.label}</span>}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
       </nav>
+
+      {/* Footer Section - User Info and Actions */}
+      <div className="border-t p-4">
+        {/* User Info */}
+        {user && (
+          <div className={cn(
+            "flex items-center gap-3 mb-3",
+            sidebarCollapsed && !mobile && "justify-center"
+          )}>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
+              {user.email?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            {(!sidebarCollapsed || mobile) && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {user.email}
+                </p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {user.role}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className={cn(
+          "flex gap-2",
+          sidebarCollapsed && !mobile ? "flex-col items-center" : "items-center"
+        )}>
+          {/* Theme Toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            className={cn(
+              "h-8 w-8 p-0",
+              sidebarCollapsed && !mobile && "mb-2"
+            )}
+            title="Toggle theme"
+          >
+            {theme === 'light' ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
+          </Button>
+
+          {/* Logout Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className={cn(
+              "text-muted-foreground hover:text-destructive",
+              sidebarCollapsed && !mobile 
+                ? "h-8 w-8 p-0" 
+                : "h-8 px-3 gap-2 flex-1"
+            )}
+            title="Logout"
+          >
+            <LogOut className="h-4 w-4" />
+            {(!sidebarCollapsed || mobile) && <span>Logout</span>}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 
