@@ -79,8 +79,8 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <ThemeProvider defaultTheme="light" storageKey="finance-saas-theme">
-        <Toaster />
         <Router>
+          <Toaster />
           <AppRouter />
         </Router>
       </ThemeProvider>
