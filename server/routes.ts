@@ -967,13 +967,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/income", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
+      
+      // Get income with enriched data
       const result = await db
-        .select()
+        .select({
+          id: income.id,
+          amount: income.amount,
+          description: income.description,
+          date: income.date,
+          isRecurring: income.isRecurring,
+          recurringFrequency: income.recurringFrequency,
+          recurringEndDate: income.recurringEndDate,
+          status: income.status,
+          invoiceId: income.invoiceId,
+          currency: income.currency,
+          createdAt: income.createdAt,
+          clientId: income.clientId,
+          categoryId: income.categoryId,
+          paymentSourceId: income.paymentSourceId,
+          clientName: clients.name,
+          categoryName: categories.name,
+          categoryParentId: categories.parentId,
+          paymentSourceName: paymentSources.name,
+        })
         .from(income)
+        .leftJoin(clients, eq(income.clientId, clients.id))
+        .leftJoin(categories, eq(income.categoryId, categories.id))
+        .leftJoin(paymentSources, eq(income.paymentSourceId, paymentSources.id))
         .where(eq(income.organizationId, organizationId))
         .orderBy(desc(income.createdAt));
+
+      // Get all categories to build hierarchical names
+      const allCategories = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.organizationId, organizationId));
+
+      // Enrich results with hierarchical category names
+      const enrichedResult = result.map(incomeRecord => {
+        let hierarchicalCategoryName = incomeRecord.categoryName;
+        
+        if (incomeRecord.categoryName && incomeRecord.categoryParentId) {
+          const parentCategory = allCategories.find(c => c.id === incomeRecord.categoryParentId);
+          if (parentCategory) {
+            hierarchicalCategoryName = `${parentCategory.name} → ${incomeRecord.categoryName}`;
+          }
+        }
+        
+        return {
+          ...incomeRecord,
+          categoryName: hierarchicalCategoryName
+        };
+      });
       
-      res.json(result);
+      res.json(enrichedResult);
     } catch (error) {
       console.error("Error fetching income:", error);
       res.status(500).json({ message: "Failed to fetch income" });

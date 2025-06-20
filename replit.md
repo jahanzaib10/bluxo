@@ -238,6 +238,14 @@ Changelog:
   * Enhanced frontend feedback for category operations with detailed delete messages and notifications
   * Successfully integrated hierarchical categories into all financial transaction forms and dashboard components
   * Verified organization-based security ensuring users can only manage their own categories
+- June 20, 2025. Employee-specific expenses page with full expense table completed
+  * Built comprehensive employee expenses page with individual employee expense tracking
+  * Added backend API routes for /api/employees/:id and /api/employees/:id/expenses endpoints
+  * Enhanced expense management with hierarchical category display (parent → child format)
+  * Implemented expense summary cards showing total expenses, record count, and recurring expenses
+  * Added navigation from employees table with clickable employee names and dollar sign icons
+  * Created full CRUD functionality for employee-specific expense management with recurring expense support
+  * Updated Income endpoints to properly display client names and hierarchical category formatting
 ```
 
 ## User Preferences

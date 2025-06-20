@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Upload, Download, Search, Edit, Trash2, DollarSign } from "lucide-react";
+import { Plus, Users, Upload, Download, Search, Edit, Trash2, DollarSign, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Employee {
@@ -581,7 +581,19 @@ export default function Employees() {
                 <TableBody>
                   {filteredEmployees.map((employee: Employee) => (
                     <TableRow key={employee.id}>
-                      <TableCell className="font-medium whitespace-nowrap">{employee.name}</TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setLocation(`/employees/${employee.id}/expenses`)}
+                            className="p-0 h-auto font-medium text-left justify-start hover:bg-transparent hover:text-purple-600"
+                          >
+                            <User className="h-4 w-4 mr-1" />
+                            {employee.name}
+                          </Button>
+                        </div>
+                      </TableCell>
                       <TableCell className="whitespace-nowrap">{employee.email || "—"}</TableCell>
                       <TableCell className="whitespace-nowrap">{employee.position || "—"}</TableCell>
                       <TableCell className="whitespace-nowrap">{employee.groupName || "—"}</TableCell>
