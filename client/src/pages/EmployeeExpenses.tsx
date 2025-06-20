@@ -48,9 +48,9 @@ interface FormData {
 }
 
 export default function EmployeeExpenses() {
-  const params = useParams();
-  const employeeId = params.employeeId;
   const [, setLocation] = useLocation();
+  // Extract employeeId from URL path
+  const employeeId = window.location.pathname.split('/')[2];
   const { toast } = useToast();
   const queryClient = useQueryClient();
   

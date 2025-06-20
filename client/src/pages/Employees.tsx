@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Upload, Download, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, Users, Upload, Download, Search, Edit, Trash2, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Employee {
@@ -609,6 +610,14 @@ export default function Employees() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setLocation(`/employees/${employee.id}/expenses`)}
+                            title="View Expenses"
+                          >
+                            <DollarSign className="h-3 w-3" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
