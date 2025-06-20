@@ -142,6 +142,10 @@ export default function Employees() {
       country: "",
       startDate: "",
       endDate: "",
+      birthDate: "",
+      seniorityLevel: "",
+      paymentAmount: "",
+      groupName: "",
       status: "active",
     });
   };
@@ -164,6 +168,10 @@ export default function Employees() {
       country: employee.country || "",
       startDate: employee.startDate || "",
       endDate: employee.endDate || "",
+      birthDate: employee.birthDate || "",
+      seniorityLevel: employee.seniorityLevel || "",
+      paymentAmount: employee.paymentAmount?.toString() || "",
+      groupName: employee.groupName || "",
       status: employee.status,
     });
     setIsEditOpen(true);
@@ -201,7 +209,7 @@ export default function Employees() {
   };
 
   const downloadTemplate = () => {
-    const template = "name,email,position,country,start_date,end_date,status\nJohn Doe,john@example.com,Developer,USA,2024-01-01,,active\nJane Smith,jane@example.com,Designer,Canada,2024-02-01,,active";
+    const template = "name,email,position,country,start_date,end_date,birth_date,seniority_level,payment_amount,group_name,status\nJohn Doe,john@dartnox.com,Senior Developer,Pakistan,2023-01-15,,1990-05-20,Senior,PKR 150000,Engineering,active\nJane Smith,jane@dartnox.com,UI/UX Designer,USA,2023-03-01,,1988-12-10,Mid,USD 75000,Design,active\nAli Hassan,ali@dartnox.com,Project Manager,Pakistan,2022-06-01,,1985-08-15,Senior,PKR 200000,Management,active";
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -275,7 +283,9 @@ export default function Employees() {
                             <TableHead>Name</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead>Position</TableHead>
-                            <TableHead>Country</TableHead>
+                            <TableHead>Group</TableHead>
+                            <TableHead>Seniority</TableHead>
+                            <TableHead>Payment</TableHead>
                             <TableHead>Start Date</TableHead>
                             <TableHead>Status</TableHead>
                           </TableRow>
@@ -283,12 +293,14 @@ export default function Employees() {
                         <TableBody>
                           {csvPreview.map((row, index) => (
                             <TableRow key={index}>
-                              <TableCell>{row.name}</TableCell>
-                              <TableCell>{row.email}</TableCell>
-                              <TableCell>{row.position}</TableCell>
-                              <TableCell>{row.country}</TableCell>
-                              <TableCell>{row.start_date}</TableCell>
-                              <TableCell>{row.status}</TableCell>
+                              <TableCell>{row.name || "—"}</TableCell>
+                              <TableCell>{row.email || "—"}</TableCell>
+                              <TableCell>{row.position || row.job_title || "—"}</TableCell>
+                              <TableCell>{row.group_name || row.group || "—"}</TableCell>
+                              <TableCell>{row.seniority_level || row.level || "—"}</TableCell>
+                              <TableCell>{row.payment_amount || row.salary || "—"}</TableCell>
+                              <TableCell>{row.start_date || row.hire_date || "—"}</TableCell>
+                              <TableCell>{row.status || "active"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -331,20 +343,22 @@ export default function Employees() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">Email *</Label>
                     <Input
                       id="email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="position">Position</Label>
+                    <Label htmlFor="position">Position *</Label>
                     <Input
                       id="position"
                       value={formData.position}
                       onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
+                      required
                     />
                   </div>
                   <div>
@@ -356,12 +370,13 @@ export default function Employees() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="startDate">Start Date</Label>
+                    <Label htmlFor="startDate">Start Date *</Label>
                     <Input
                       id="startDate"
                       type="date"
                       value={formData.startDate}
                       onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                      required
                     />
                   </div>
                   <div>
@@ -371,6 +386,50 @@ export default function Employees() {
                       type="date"
                       value={formData.endDate}
                       onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="birthDate">Birth Date</Label>
+                    <Input
+                      id="birthDate"
+                      type="date"
+                      value={formData.birthDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="seniorityLevel">Seniority Level</Label>
+                    <Select value={formData.seniorityLevel} onValueChange={(value) => setFormData(prev => ({ ...prev, seniorityLevel: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="junior">Junior</SelectItem>
+                        <SelectItem value="mid">Mid</SelectItem>
+                        <SelectItem value="senior">Senior</SelectItem>
+                        <SelectItem value="lead">Lead</SelectItem>
+                        <SelectItem value="principal">Principal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="paymentAmount">Payment Amount</Label>
+                    <Input
+                      id="paymentAmount"
+                      type="number"
+                      step="0.01"
+                      value={formData.paymentAmount}
+                      onChange={(e) => setFormData(prev => ({ ...prev, paymentAmount: e.target.value }))}
+                      placeholder="e.g., 150000.00"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="groupName">Group/Department</Label>
+                    <Input
+                      id="groupName"
+                      value={formData.groupName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, groupName: e.target.value }))}
+                      placeholder="e.g., Engineering, Design"
                     />
                   </div>
                 </div>
@@ -424,9 +483,10 @@ export default function Employees() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Position</TableHead>
-                    <TableHead>Country</TableHead>
+                    <TableHead>Group</TableHead>
+                    <TableHead>Seniority</TableHead>
+                    <TableHead>Payment</TableHead>
                     <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -437,9 +497,23 @@ export default function Employees() {
                       <TableCell className="font-medium">{employee.name}</TableCell>
                       <TableCell>{employee.email || "—"}</TableCell>
                       <TableCell>{employee.position || "—"}</TableCell>
-                      <TableCell>{employee.country || "—"}</TableCell>
+                      <TableCell>{employee.groupName || "—"}</TableCell>
+                      <TableCell>
+                        {employee.seniorityLevel ? (
+                          <Badge variant="outline">{employee.seniorityLevel}</Badge>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {employee.paymentAmount ? 
+                          new Intl.NumberFormat('en-US', { 
+                            style: 'currency', 
+                            currency: 'USD',
+                            minimumFractionDigits: 0 
+                          }).format(employee.paymentAmount) 
+                          : "—"
+                        }
+                      </TableCell>
                       <TableCell>{employee.startDate ? new Date(employee.startDate).toLocaleDateString() : "—"}</TableCell>
-                      <TableCell>{employee.endDate ? new Date(employee.endDate).toLocaleDateString() : "—"}</TableCell>
                       <TableCell>
                         <Badge variant={employee.status === 'active' ? 'default' : employee.status === 'inactive' ? 'secondary' : 'destructive'}>
                           {employee.status}
