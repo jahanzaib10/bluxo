@@ -455,27 +455,88 @@ export default function Income() {
                 Import CSV
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Import Income Records</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="csvData">CSV Data</Label>
-                  <Textarea
-                    id="csvData"
-                    placeholder="amount,date,client_name,payment_source_name,category_name,description,is_recurring"
-                    value={csvData}
-                    onChange={(e) => setCsvData(e.target.value)}
-                    rows={10}
+                  <Label htmlFor="csvFile">Upload CSV File</Label>
+                  <Input
+                    id="csvFile"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    className="mt-2"
                   />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Expected headers: amount, currency, date, description, category, status, is_recurring, recurring_frequency, recurring_end_date, invoice_id, client_id, payment_source_id
+                  </p>
                 </div>
+
+                {previewData.length > 0 && (
+                  <div className="border rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-2">Preview ({previewData.length} records)</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left p-2 border-r">Amount</th>
+                            <th className="text-left p-2 border-r">Currency</th>
+                            <th className="text-left p-2 border-r">Date</th>
+                            <th className="text-left p-2 border-r">Description</th>
+                            <th className="text-left p-2 border-r">Category</th>
+                            <th className="text-left p-2 border-r">Status</th>
+                            <th className="text-left p-2 border-r">Recurring</th>
+                            <th className="text-left p-2">Frequency</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewData.slice(0, 5).map((row, index) => (
+                            <tr key={index} className="border-b">
+                              <td className="p-2 border-r">{row.amount || '-'}</td>
+                              <td className="p-2 border-r">{row.currency || 'USD'}</td>
+                              <td className="p-2 border-r">{row.date || '-'}</td>
+                              <td className="p-2 border-r">{row.description || '-'}</td>
+                              <td className="p-2 border-r">{row.category || '-'}</td>
+                              <td className="p-2 border-r">
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  row.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                  row.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  row.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {row.status || 'paid'}
+                                </span>
+                              </td>
+                              <td className="p-2 border-r">{row.is_recurring === 'true' ? 'Yes' : 'No'}</td>
+                              <td className="p-2">{row.recurring_frequency || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {previewData.length > 5 && (
+                        <p className="text-sm text-gray-500 mt-2">
+                          Showing first 5 rows of {previewData.length} total records
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setIsImportOpen(false)}>
+                  <Button variant="outline" onClick={() => {
+                    setIsImportOpen(false);
+                    setCsvData("");
+                    setPreviewData([]);
+                  }}>
                     Cancel
                   </Button>
-                  <Button onClick={handleImport} disabled={importMutation.isPending}>
-                    Import
+                  <Button 
+                    onClick={handleImport} 
+                    disabled={importMutation.isPending || !csvData}
+                  >
+                    {importMutation.isPending ? "Importing..." : `Import ${previewData.length} Records`}
                   </Button>
                 </div>
               </div>
