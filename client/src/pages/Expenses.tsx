@@ -70,6 +70,7 @@ export default function Expenses() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState<FormData>({
     amount: "",
     date: "",
@@ -102,7 +103,7 @@ export default function Expenses() {
     queryKey: ["/api/categories"],
   });
 
-  const expenseCategories = categories.filter((cat: any) => cat.type === 'expense');
+  const expenseCategories = (categories as any[]).filter((cat: any) => cat.type === 'expense');
 
   // Mutations
   const createMutation = useMutation({
@@ -141,6 +142,23 @@ export default function Expenses() {
     },
     onError: () => {
       toast({ title: "Failed to delete expense record", variant: "destructive" });
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map(id => apiRequest(`/api/expenses/${id}`, "DELETE")));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+      setSelectedExpenses(new Set());
+      toast({ 
+        title: "Bulk delete completed",
+        description: `Successfully deleted ${selectedExpenses.size} expense records`
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete expense records", variant: "destructive" });
     },
   });
 
@@ -206,6 +224,42 @@ export default function Expenses() {
     }
   };
 
+  const handleBulkDelete = () => {
+    if (selectedExpenses.size === 0) return;
+    
+    if (confirm(`Are you sure you want to delete ${selectedExpenses.size} expense records?`)) {
+      bulkDeleteMutation.mutate(Array.from(selectedExpenses));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedExpenses(new Set(filteredExpenses.map((expense: ExpenseRecord) => expense.id)));
+    } else {
+      setSelectedExpenses(new Set());
+    }
+  };
+
+  const handleSelectExpense = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedExpenses);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedExpenses(newSelected);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear().toString().slice(-2);
+    return `${month} ${day}, ${year}`;
+  };
+
   // CSV Import functions
   const parseCsvData = (csvText: string): CsvRow[] => {
     const lines = csvText.trim().split('\n');
@@ -248,7 +302,7 @@ export default function Expenses() {
 
       // Validate employee mapping
       if (row.employee_email) {
-        const employee = employees.find(e => 
+        const employee = (employees as any[]).find(e => 
           e.email && e.email.toLowerCase() === row.employee_email.toLowerCase()
         );
         if (!employee) {
@@ -431,7 +485,7 @@ export default function Expenses() {
   };
 
   // Filter expenses based on search term
-  const filteredExpenses = expenses.filter((expense: ExpenseRecord) =>
+  const filteredExpenses = (expenses as ExpenseRecord[]).filter((expense: ExpenseRecord) =>
     expense.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     expense.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     expense.categoryName?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -475,7 +529,7 @@ export default function Expenses() {
               <SelectValue placeholder="Select employee" />
             </SelectTrigger>
             <SelectContent>
-              {employees.map((employee: any) => (
+              {(employees as any[]).map((employee: any) => (
                 <SelectItem key={employee.id} value={employee.id}>
                   {employee.name}
                 </SelectItem>
@@ -856,15 +910,43 @@ export default function Expenses() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center space-x-2">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search expense records..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
+      {/* Search and Bulk Actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search expense records..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+        
+        {selectedExpenses.size > 0 && (
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-muted-foreground">
+              {selectedExpenses.size} selected
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              {bulkDeleteMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Expense Records Table */}
@@ -882,39 +964,51 @@ export default function Expenses() {
                 <Table>
                   <TableHeader className="sticky top-0 bg-white z-10">
                     <TableRow>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Recurring</TableHead>
+                      <TableHead className="w-[50px]">
+                        <input
+                          type="checkbox"
+                          checked={selectedExpenses.size === filteredExpenses.length && filteredExpenses.length > 0}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                      </TableHead>
+                      <TableHead className="min-w-[120px]">Employee</TableHead>
+                      <TableHead className="min-w-[100px]">Amount</TableHead>
+                      <TableHead className="min-w-[90px]">Date</TableHead>
+                      <TableHead className="min-w-[120px]">Category</TableHead>
+                      <TableHead className="min-w-[150px]">Description</TableHead>
+                      <TableHead className="min-w-[100px]">Recurring</TableHead>
                       <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">
+                        <TableCell colSpan={8} className="text-center">
                           Loading...
                         </TableCell>
                       </TableRow>
                     ) : filteredExpenses.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">
+                        <TableCell colSpan={8} className="text-center">
                           No expense records found
                         </TableCell>
                       </TableRow>
                     ) : (
                       filteredExpenses.map((record: ExpenseRecord) => (
                         <TableRow key={record.id}>
-                          <TableCell className="font-medium">
-                            ${parseFloat(record.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
                           <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={selectedExpenses.has(record.id)}
+                              onChange={(e) => handleSelectExpense(record.id, e.target.checked)}
+                              className="h-4 w-4"
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium whitespace-nowrap">
                             {record.employeeName ? (
-                              <div className="space-y-1">
-                                <div className="font-medium text-sm">{record.employeeName}</div>
+                              <div>
+                                <div className="text-sm font-medium">{record.employeeName}</div>
                                 {record.employeeEmail && (
                                   <div className="text-xs text-gray-500">{record.employeeEmail}</div>
                                 )}
@@ -923,25 +1017,31 @@ export default function Expenses() {
                               <span className="text-gray-400">N/A</span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="font-medium whitespace-nowrap">
+                            ${parseFloat(record.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {formatDate(record.date)}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
                             {record.categoryName ? (
                               <span className="text-sm">{record.categoryName}</span>
                             ) : (
                               <span className="text-gray-400">N/A</span>
                             )}
                           </TableCell>
-                          <TableCell className="max-w-[200px] truncate">
+                          <TableCell className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">
                             {record.description || 'N/A'}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="whitespace-nowrap">
                             {record.isRecurring ? (
-                              <div className="space-y-1">
+                              <div>
                                 <Badge variant="secondary" className="text-xs">
                                   {record.recurringFrequency?.charAt(0).toUpperCase() + record.recurringFrequency?.slice(1) || 'Recurring'}
                                 </Badge>
                                 {record.recurringEndDate && (
-                                  <div className="text-xs text-muted-foreground">
-                                    Until {new Date(record.recurringEndDate).toLocaleDateString()}
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    Until {formatDate(record.recurringEndDate)}
                                   </div>
                                 )}
                               </div>
@@ -949,8 +1049,8 @@ export default function Expenses() {
                               <Badge variant="outline" className="text-xs">One-time</Badge>
                             )}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
+                          <TableCell className="whitespace-nowrap">
+                            <div className="flex space-x-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
