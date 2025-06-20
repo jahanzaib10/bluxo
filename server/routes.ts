@@ -13,7 +13,8 @@ import {
   insertExpenseSchema,
   insertPaymentSourceSchema,
   insertClientPermissionsSchema,
-  clientAuthRequestSchema
+  clientAuthRequestSchema,
+  insertSubscriptionSchema
 } from "@shared/schema";
 import { storage } from "./storage";
 import { eq, sum, desc, and } from "drizzle-orm";
