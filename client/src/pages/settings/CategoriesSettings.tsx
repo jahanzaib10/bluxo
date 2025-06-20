@@ -1,408 +1,314 @@
 import React, { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, FolderTree, Folder, FileText, ChevronRight, ChevronDown } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { apiRequest } from '@/lib/queryClient';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { z } from 'zod';
+import { Tag, Plus, Pencil, Trash2, Save } from 'lucide-react';
 
-interface Category {
+const categorySchema = z.object({
+  name: z.string().min(1, 'Category name is required'),
+  type: z.enum(['income', 'expense'], {
+    required_error: 'Please select a category type',
+  }),
+});
+
+type Category = {
   id: string;
   name: string;
-  parentId?: string;
-  description?: string;
-  color?: string;
-  children?: Category[];
-}
+  type: 'income' | 'expense';
+  organizationId: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
-export function CategoriesSettings() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [formData, setFormData] = useState({
-    name: '',
-    parentId: '',
-    description: '',
-    color: '#3B82F6'
-  });
-
-  const queryClient = useQueryClient();
+export default function CategoriesSettings() {
   const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories, isLoading } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
   });
 
-  // Build category tree structure
-  const categoryTree = React.useMemo(() => {
-    if (!Array.isArray(categories)) return [];
-
-    const categoryMap = new Map<string, Category>();
-    const rootCategories: Category[] = [];
-
-    // First pass: create map of all categories
-    categories.forEach((cat: any) => {
-      categoryMap.set(cat.id, { ...cat, children: [] });
-    });
-
-    // Second pass: build tree structure
-    categories.forEach((cat: any) => {
-      const category = categoryMap.get(cat.id)!;
-      if (cat.parentId && categoryMap.has(cat.parentId)) {
-        const parent = categoryMap.get(cat.parentId)!;
-        parent.children!.push(category);
-      } else {
-        rootCategories.push(category);
-      }
-    });
-
-    return rootCategories;
-  }, [categories]);
-
-  const createCategory = useMutation({
-    mutationFn: async (data: any) => {
-      const cleanData = {
-        ...data,
-        parentId: data.parentId === 'no-parent' ? null : data.parentId || null
-      };
-      return apiRequest('POST', '/api/categories', cleanData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      resetForm();
-      toast({ title: "Success", description: "Category created successfully." });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const updateCategory = useMutation({
-    mutationFn: async ({ id, ...data }: any) => {
-      const cleanData = {
-        ...data,
-        parentId: data.parentId || null
-      };
-      return apiRequest('PUT', `/api/categories/${id}`, cleanData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      resetForm();
-      toast({ title: "Success", description: "Category updated successfully." });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const deleteCategory = useMutation({
-    mutationFn: async (id: string) => {
-      return apiRequest('DELETE', `/api/categories/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      toast({ title: "Success", description: "Category deleted successfully." });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingCategory) {
-      updateCategory.mutate({ id: editingCategory.id, ...formData });
-    } else {
-      createCategory.mutate(formData);
-    }
-  };
-
-  const resetForm = () => {
-    setShowForm(false);
-    setEditingCategory(null);
-    setFormData({
+  const form = useForm({
+    resolver: zodResolver(categorySchema),
+    defaultValues: {
       name: '',
-      parentId: '',
-      description: '',
-      color: '#3B82F6'
-    });
+      type: 'expense' as const,
+    },
+  });
+
+  React.useEffect(() => {
+    if (editingCategory) {
+      form.reset({
+        name: editingCategory.name,
+        type: editingCategory.type,
+      });
+    } else {
+      form.reset({
+        name: '',
+        type: 'expense',
+      });
+    }
+  }, [editingCategory, form]);
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof categorySchema>) => {
+      return await apiRequest('/api/categories', 'POST', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Category created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create category",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof categorySchema>) => {
+      return await apiRequest(`/api/categories/${editingCategory?.id}`, 'PUT', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Category updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      setIsDialogOpen(false);
+      setEditingCategory(null);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update category",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/categories/${id}`, 'DELETE');
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Category deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete category",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: z.infer<typeof categorySchema>) => {
+    if (editingCategory) {
+      updateCategoryMutation.mutate(data);
+    } else {
+      createCategoryMutation.mutate(data);
+    }
   };
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
-    setFormData({
-      name: category.name,
-      parentId: category.parentId || '',
-      description: category.description || '',
-      color: category.color || '#3B82F6'
-    });
-    setShowForm(true);
+    setIsDialogOpen(true);
   };
 
-  const handleDelete = (category: Category) => {
-    if (confirm(`Are you sure you want to delete "${category.name}"? This will also delete all subcategories.`)) {
-      deleteCategory.mutate(category.id);
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to delete this category?')) {
+      deleteCategoryMutation.mutate(id);
     }
   };
 
-  const toggleExpanded = (categoryId: string) => {
-    setExpandedCategories(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(categoryId)) {
-        newSet.delete(categoryId);
-      } else {
-        newSet.add(categoryId);
-      }
-      return newSet;
-    });
+  const openCreateDialog = () => {
+    setEditingCategory(null);
+    setIsDialogOpen(true);
   };
-
-  const renderCategoryTree = (categories: Category[], level = 0) => {
-    return categories.map((category) => (
-      <div key={category.id} className="space-y-1">
-        <div 
-          className={`flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 ${
-            level > 0 ? 'ml-6 border-l-2 border-slate-200' : ''
-          }`}
-        >
-          <div className="flex items-center gap-2 flex-1">
-            {category.children && category.children.length > 0 ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleExpanded(category.id)}
-                className="p-1 h-6 w-6"
-              >
-                {expandedCategories.has(category.id) ? (
-                  <ChevronDown className="h-3 w-3" />
-                ) : (
-                  <ChevronRight className="h-3 w-3" />
-                )}
-              </Button>
-            ) : (
-              <div className="w-6" />
-            )}
-            
-            {category.children && category.children.length > 0 ? (
-              <Folder className="h-4 w-4 text-blue-600" />
-            ) : (
-              <FileText className="h-4 w-4 text-slate-600" />
-            )}
-            
-            <div className="flex items-center gap-2 flex-1">
-              <span className="font-medium">{category.name}</span>
-              {category.color && (
-                <div 
-                  className="w-3 h-3 rounded-full border"
-                  style={{ backgroundColor: category.color }}
-                />
-              )}
-            </div>
-            
-            {category.description && (
-              <span className="text-sm text-muted-foreground truncate max-w-xs">
-                {category.description}
-              </span>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => handleEdit(category)}>
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => handleDelete(category)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        
-        {category.children && 
-         category.children.length > 0 && 
-         expandedCategories.has(category.id) && (
-          <div className="space-y-1">
-            {renderCategoryTree(category.children, level + 1)}
-          </div>
-        )}
-      </div>
-    ));
-  };
-
-  const flatCategories = React.useMemo(() => {
-    if (!Array.isArray(categories)) return [];
-    return categories;
-  }, [categories]);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Categories Settings</h1>
-          <p className="text-muted-foreground">
-            Organize your finances with hierarchical categories
+          <h3 className="text-lg font-medium">Categories</h3>
+          <p className="text-sm text-muted-foreground">
+            Manage income and expense categories for your organization.
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Category
-        </Button>
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Categories</CardTitle>
-            <FolderTree className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {flatCategories.length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              All categories
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Root Categories</CardTitle>
-            <Folder className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {categoryTree.length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Top-level categories
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Subcategories</CardTitle>
-            <FileText className="h-4 w-4 text-slate-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-600">
-              {flatCategories.length - categoryTree.length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Nested categories
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Add/Edit Category Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingCategory ? 'Edit Category' : 'Add New Category'}</CardTitle>
-            <CardDescription>
-              {editingCategory ? 'Update category information' : 'Create a new category for organizing transactions'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="categoryName">Category Name</Label>
-                  <Input
-                    id="categoryName"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Enter category name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="parentCategory">Parent Category</Label>
-                  <Select
-                    value={formData.parentId}
-                    onValueChange={(value) => setFormData({ ...formData, parentId: value })}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={openCreateDialog} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Category
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Tag className="h-5 w-5" />
+                {editingCategory ? 'Edit Category' : 'Add New Category'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingCategory 
+                  ? 'Update the category details below.'
+                  : 'Create a new category for organizing your income and expenses.'
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter category name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="income">Income</SelectItem>
+                          <SelectItem value="expense">Expense</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select parent (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no-parent">No Parent (Root Category)</SelectItem>
-                      {flatCategories
-                        .filter((cat: any) => cat.id !== editingCategory?.id)
-                        .map((category: any) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={createCategoryMutation.isPending || updateCategoryMutation.isPending}
+                    className="flex items-center gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {editingCategory ? 'Update' : 'Create'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="categoryDescription">Description</Label>
-                  <Input
-                    id="categoryDescription"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Optional description"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="categoryColor">Color</Label>
-                  <Input
-                    id="categoryColor"
-                    type="color"
-                    value={formData.color}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={createCategory.isPending || updateCategory.isPending}
-                >
-                  {editingCategory ? 'Update' : 'Create'} Category
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Categories Tree */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FolderTree className="h-5 w-5" />
-            Category Tree
+            <Tag className="h-5 w-5" />
+            All Categories
           </CardTitle>
           <CardDescription>
-            Hierarchical view of all categories. Click the arrows to expand/collapse.
+            Manage your income and expense categories.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {categoryTree.length > 0 ? (
-              renderCategoryTree(categoryTree)
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <FolderTree className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No categories yet. Create your first category to get started.</p>
-              </div>
-            )}
-          </div>
+          {isLoading ? (
+            <div>Loading categories...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories?.length ? (
+                  categories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={category.type === 'income' ? 'default' : 'secondary'}>
+                          {category.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(category.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(category)}
+                            className="flex items-center gap-1"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(category.id)}
+                            className="flex items-center gap-1 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      No categories found. Create your first category to get started.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

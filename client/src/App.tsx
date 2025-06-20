@@ -39,9 +39,12 @@ function AuthenticatedApp() {
         <Route path="/employees" component={Employees} />
         <Route path="/clients" component={Clients} />
         <Route path="/settings" component={Settings} />
-        <Route path="/settings/categories" component={Categories} />
-        <Route path="/settings/payment-sources" component={PaymentSources} />
-        <Route path="/settings/user-management" component={UserManagement} />
+        <Route path="/settings/profile" component={() => <Settings defaultTab="profile" />} />
+        <Route path="/settings/security" component={() => <Settings defaultTab="security" />} />
+        <Route path="/settings/organization" component={() => <Settings defaultTab="organization" />} />
+        <Route path="/settings/categories" component={() => <Settings defaultTab="categories" />} />
+        <Route path="/settings/payment-sources" component={() => <Settings defaultTab="payment-sources" />} />
+        <Route path="/settings/user-management" component={() => <Settings defaultTab="user-management" />} />
         <Route path="/client-portal" component={ClientPortal} />
         <Route path="/client-dashboard" component={ClientDashboard} />
         <Route component={NotFound} />
