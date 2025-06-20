@@ -57,7 +57,7 @@ export default function UserManagement() {
     defaultValues: {
       email: "",
       role: "viewer",
-      type: "team_member",
+      type: "internal",
     },
   });
 
@@ -325,9 +325,8 @@ export default function UserManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="team_member">Team Member</SelectItem>
-                          <SelectItem value="contractor">Contractor</SelectItem>
-                          <SelectItem value="guest">Guest</SelectItem>
+                          <SelectItem value="internal">Internal Team Member</SelectItem>
+                          <SelectItem value="client">Client User</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

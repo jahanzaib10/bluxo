@@ -1706,6 +1706,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Accept invitation endpoint (Step 3 of QA)
+  app.get("/api/invitations/verify/:token", async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const invitation = await storage.getInvitationByToken(token);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invalid invite link" });
+      }
+      
+      if (invitation.status !== "pending") {
+        return res.status(400).json({ message: "Invitation already processed" });
+      }
+      
+      if (invitation.expiresAt && new Date() > new Date(invitation.expiresAt)) {
+        return res.status(400).json({ message: "Link expired" });
+      }
+      
+      res.json({ invitation: { email: invitation.email, role: invitation.role, type: invitation.type } });
+    } catch (error) {
+      console.error("Error verifying invitation:", error);
+      res.status(500).json({ message: "Failed to verify invitation" });
+    }
+  });
+
+  app.post("/api/invitations/accept/:token", async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const { password, name } = req.body;
+      
+      const invitation = await storage.getInvitationByToken(token);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invalid invite link" });
+      }
+      
+      if (invitation.status !== "pending") {
+        return res.status(400).json({ message: "Invitation already processed" });
+      }
+      
+      if (invitation.expiresAt && new Date() > new Date(invitation.expiresAt)) {
+        return res.status(400).json({ message: "Link expired" });
+      }
+      
+      // Create user account
+      const userId = randomUUID();
+      const newUser = {
+        id: userId,
+        email: invitation.email,
+        name: name || invitation.email.split('@')[0],
+        role: invitation.role,
+        type: invitation.type,
+        status: "active" as const,
+        organizationId: invitation.organizationId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        profileImageUrl: "",
+        lastLoginAt: new Date()
+      };
+      
+      // Insert user into database
+      await db.insert(users).values(newUser);
+      
+      // Mark invitation as accepted
+      await storage.updateInvitationStatus(invitation.id, "accepted");
+      
+      const redirectUrl = invitation.type === "internal" ? "/dashboard" : "/client-dashboard";
+      
+      res.json({ 
+        message: "Account created successfully", 
+        user: { id: userId, email: newUser.email, role: newUser.role, type: newUser.type },
+        redirectUrl 
+      });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ message: "Failed to accept invitation" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
