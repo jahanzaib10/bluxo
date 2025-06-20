@@ -25,6 +25,11 @@ interface IncomeRecord {
   categoryName?: string;
   description?: string;
   isRecurring?: boolean;
+  recurringFrequency?: string;
+  recurringEndDate?: string;
+  status?: string;
+  invoiceId?: string;
+  currency?: string;
   createdAt: string;
 }
 
@@ -36,6 +41,11 @@ interface FormData {
   categoryId: string;
   description: string;
   isRecurring: boolean;
+  recurringFrequency: string;
+  recurringEndDate: string;
+  status: string;
+  invoiceId: string;
+  currency: string;
 }
 
 export default function Income() {
@@ -57,6 +67,11 @@ export default function Income() {
     categoryId: "",
     description: "",
     isRecurring: false,
+    recurringFrequency: "",
+    recurringEndDate: "",
+    status: "paid",
+    invoiceId: "",
+    currency: "USD",
   });
 
   // Queries
@@ -142,6 +157,11 @@ export default function Income() {
       categoryId: "",
       description: "",
       isRecurring: false,
+      recurringFrequency: "",
+      recurringEndDate: "",
+      status: "paid",
+      invoiceId: "",
+      currency: "USD",
     });
   };
 
@@ -164,6 +184,11 @@ export default function Income() {
       categoryId: record.categoryId || "",
       description: record.description || "",
       isRecurring: record.isRecurring || false,
+      recurringFrequency: record.recurringFrequency || "",
+      recurringEndDate: record.recurringEndDate || "",
+      status: record.status || "paid",
+      invoiceId: record.invoiceId || "",
+      currency: record.currency || "USD",
     });
     setIsEditOpen(true);
   };
@@ -293,6 +318,52 @@ export default function Income() {
         />
       </div>
 
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="status">Status</Label>
+          <Select
+            value={formData.status}
+            onValueChange={(value) => setFormData({ ...formData, status: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="currency">Currency</Label>
+          <Select
+            value={formData.currency}
+            onValueChange={(value) => setFormData({ ...formData, currency: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select currency" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="USD">USD</SelectItem>
+              <SelectItem value="EUR">EUR</SelectItem>
+              <SelectItem value="GBP">GBP</SelectItem>
+              <SelectItem value="PKR">PKR</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="invoiceId">Invoice ID</Label>
+        <Input
+          id="invoiceId"
+          value={formData.invoiceId}
+          onChange={(e) => setFormData({ ...formData, invoiceId: e.target.value })}
+          placeholder="Optional invoice reference"
+        />
+      </div>
+
       <div className="flex items-center space-x-2">
         <Checkbox
           id="isRecurring"
@@ -301,6 +372,38 @@ export default function Income() {
         />
         <Label htmlFor="isRecurring">Recurring Income</Label>
       </div>
+
+      {formData.isRecurring && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="recurringFrequency">Recurring Frequency</Label>
+            <Select
+              value={formData.recurringFrequency}
+              onValueChange={(value) => setFormData({ ...formData, recurringFrequency: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select frequency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+                <SelectItem value="quarterly">Quarterly</SelectItem>
+                <SelectItem value="bi-annual">Bi-Annual</SelectItem>
+                <SelectItem value="yearly">Yearly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="recurringEndDate">Recurring End Date</Label>
+            <Input
+              id="recurringEndDate"
+              type="date"
+              value={formData.recurringEndDate}
+              onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end space-x-2">
         <Button
@@ -396,10 +499,12 @@ export default function Income() {
               <TableHead>Amount</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Client</TableHead>
-              <TableHead>Payment Source</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Description</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Invoice ID</TableHead>
+              <TableHead>Recurring</TableHead>
+              <TableHead>Next Due</TableHead>
+              <TableHead>Description</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
