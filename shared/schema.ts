@@ -150,8 +150,15 @@ export const subscriptions = pgTable("subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-  billingCycle: varchar("billing_cycle").notNull(), // "monthly", "yearly"
-  nextDueDate: date("next_due_date").notNull(),
+  billingCycle: varchar("billing_cycle").notNull(), // "monthly", "yearly", "quarterly", "bi-annual"
+  nextDueDate: date("next_due_date"),
+  description: text("description"),
+  reconciled: boolean("reconciled").default(false),
+  subscriptionType: varchar("subscription_type").default("self"), // "self", "client"
+  clientId: uuid("client_id").references(() => clients.id),
+  employeeId: uuid("employee_id").references(() => employees.id),
+  categoryId: uuid("category_id").references(() => categories.id),
+  paymentSourceId: uuid("payment_source_id").references(() => paymentSources.id),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -267,6 +274,22 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
     fields: [subscriptions.organizationId],
     references: [organizations.id],
   }),
+  client: one(clients, {
+    fields: [subscriptions.clientId],
+    references: [clients.id],
+  }),
+  employee: one(employees, {
+    fields: [subscriptions.employeeId],
+    references: [employees.id],
+  }),
+  category: one(categories, {
+    fields: [subscriptions.categoryId],
+    references: [categories.id],
+  }),
+  paymentSource: one(paymentSources, {
+    fields: [subscriptions.paymentSourceId],
+    references: [paymentSources.id],
+  }),
 }));
 
 // Input validation schemas (without organizationId for client-side)
@@ -335,8 +358,15 @@ export const insertExpenseSchema = z.object({
 export const insertSubscriptionSchema = z.object({
   name: z.string().min(1),
   amount: z.string(),
-  billingCycle: z.enum(["monthly", "yearly"]),
-  nextDueDate: z.string(),
+  billingCycle: z.enum(["monthly", "yearly", "quarterly", "bi-annual"]),
+  nextDueDate: z.string().optional(),
+  description: z.string().optional(),
+  reconciled: z.boolean().default(false),
+  subscriptionType: z.enum(["self", "client"]).default("self"),
+  clientId: z.string().uuid().optional(),
+  employeeId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().optional(),
+  paymentSourceId: z.string().uuid().optional(),
 });
 
 // User schema for Replit Auth compatibility
@@ -356,6 +386,9 @@ export type PaymentSource = typeof paymentSources.$inferSelect;
 export type Income = typeof income.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
+
+// Insert types for forms
+export type InsertSubscription = typeof subscriptions.$inferInsert;
 
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertClient = z.infer<typeof insertClientSchema>;

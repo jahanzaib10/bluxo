@@ -188,21 +188,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertClientPermissions(permissions: InsertClientPermissions): Promise<ClientPermissions> {
-    const [result] = await db
-      .insert(clientPermissions)
-      .values(permissions)
-      .onConflictDoUpdate({
-        target: clientPermissions.clientId,
-        set: {
-          show_income_graph: permissions.showIncomeGraph,
-          show_category_breakdown: permissions.showCategoryBreakdown,
-          show_payment_history: permissions.showPaymentHistory,
-          show_invoices: permissions.showInvoices,
+    // First try to find existing permissions
+    const existing = await this.getClientPermissions(permissions.clientId!);
+    
+    if (existing) {
+      // Update existing permissions
+      const [result] = await db
+        .update(clientPermissions)
+        .set({
+          showIncomeGraph: permissions.showIncomeGraph,
+          showCategoryBreakdown: permissions.showCategoryBreakdown,
+          showPaymentHistory: permissions.showPaymentHistory,
+          showInvoices: permissions.showInvoices,
           updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return result;
+        })
+        .where(eq(clientPermissions.clientId, permissions.clientId!))
+        .returning();
+      return result;
+    } else {
+      // Create new permissions
+      const [result] = await db
+        .insert(clientPermissions)
+        .values(permissions)
+        .returning();
+      return result;
+    }
   }
 
   async createClientAuthToken(clientId: string, email: string): Promise<ClientAuthToken> {

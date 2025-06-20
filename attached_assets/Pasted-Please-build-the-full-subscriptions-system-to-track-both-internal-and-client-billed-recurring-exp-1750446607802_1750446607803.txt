@@ -1,0 +1,98 @@
+Please build the full `/subscriptions` system to track both internal and client-billed recurring expenses.
+
+---
+
+🧾 Step 1: Schema Design
+
+Create or update the `subscriptions` table with the following fields:
+
+```sql
+ALTER TABLE subscriptions
+ADD COLUMN name TEXT NOT NULL,
+ADD COLUMN amount DECIMAL(12,2) NOT NULL,
+ADD COLUMN billing_cycle TEXT CHECK (billing_cycle IN ('monthly', 'yearly', 'quarterly', 'bi-annual')),
+ADD COLUMN next_due_date DATE,
+ADD COLUMN description TEXT,
+ADD COLUMN reconciled BOOLEAN DEFAULT FALSE,
+ADD COLUMN subscription_type TEXT CHECK (subscription_type IN ('self', 'client')) DEFAULT 'self',
+ADD COLUMN client_id UUID REFERENCES clients(id),
+ADD COLUMN employee_id UUID REFERENCES employees(id),
+ADD COLUMN category_id UUID REFERENCES categories(id),
+ADD COLUMN payment_source_id UUID REFERENCES payment_sources(id),
+ADD COLUMN organization_id UUID REFERENCES organizations(id) NOT NULL,
+ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+📂 Step 2: UI — /subscriptions Page
+
+Build a modern management page with:
+
+Table view: Name, Amount, Billing Cycle, Next Due, Owner, Type (self/client)
+
+Import CSV flow with preview modal (like /income)
+
+Add/Edit modal with full field support
+
+Filters: Billing Cycle, Type, Client, Reconciled
+
+Badges for "Upcoming Due", "Reconciled"
+
+💡 Smart Features
+
+Highlight subscriptions due within 7/30 days
+
+Badge: "Owned by client" or "Company Subscription"
+
+For subscription_type = client, show client.name as tag
+
+Allow clicking into /clients/:id/profile from subscription table
+
+📊 Client Dashboard Integration
+
+For subscriptions linked to a client:
+
+Show in their private dashboard under a "Subscriptions" section
+
+Respect visibility permissions
+
+Auto-deduct this from total client income to calculate net value
+
+📥 CSV Import Support
+
+Accept headers:
+
+pgsql
+Copy
+Edit
+name,amount,billing_cycle,next_due_date,description,reconciled,subscription_type,client_id,employee_id,category_id,payment_source_id
+subscription_type: must be self or client
+
+If client_id is set, use subscription_type = client
+
+✅ QA Test Cases
+
+Upload valid CSV → Preview → Import success
+
+Add/Edit modal shows all fields and saves properly
+
+Filter subscriptions by type and billing cycle
+
+View client dashboard → see linked subscriptions
+
+Client income graph reflects subscriptions as deductions
+
+📘 Swagger Docs
+
+POST /api/subscriptions/import
+
+GET /api/subscriptions
+
+POST /api/subscriptions
+
+PUT /api/subscriptions/:id
+
+DELETE /api/subscriptions/:id
+
+🔁 Regression
+
+Do not modify login/session
+
+Do not affect /income, /clients, or private dashboard logi
