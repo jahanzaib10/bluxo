@@ -24,6 +24,7 @@ import {
 import { storage } from "./storage";
 import { eq, sum, desc, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { sendInvitationEmail } from "./emailService";
 
 // Mock auth middleware for now
 function mockAuth(req: any, res: any, next: any) {
@@ -1619,10 +1620,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const invitation = await storage.createUserInvitation(validatedData, invitedById, organizationId);
       
-      // In a real app, send email here
-      console.log(`Invitation sent to ${validatedData.email} with token: ${invitation.token}`);
+      // Send invitation email
+      const emailSent = await sendInvitationEmail(
+        validatedData.email,
+        "Jay (Owner)", // In real app, get from authenticated user
+        validatedData.role,
+        validatedData.type,
+        invitation.token,
+        "DartNox"
+      );
       
-      res.json({ message: "Invitation sent successfully", invitation });
+      if (!emailSent) {
+        console.error(`Failed to send email to ${validatedData.email}`);
+        // Still return success since invitation was created in database
+      }
+      
+      res.json({ 
+        message: emailSent ? "Invitation sent successfully" : "Invitation created but email failed to send", 
+        invitation,
+        emailSent 
+      });
     } catch (error) {
       console.error("Error creating invitation:", error);
       res.status(500).json({ message: "Failed to send invitation" });
@@ -1718,10 +1735,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         organizationId
       );
       
+      // Send invitation email
+      const emailSent = await sendInvitationEmail(
+        existingInvitation.email,
+        "Jay (Owner)", // In real app, get from authenticated user
+        existingInvitation.role,
+        existingInvitation.type,
+        newInvitation.token,
+        "DartNox"
+      );
+      
+      if (!emailSent) {
+        console.error(`Failed to send email to ${existingInvitation.email}`);
+      }
+      
       // Mark old invitation as cancelled
       await storage.updateInvitationStatus(id, "cancelled");
       
-      res.json({ message: "Invitation resent successfully", invitation: newInvitation });
+      res.json({ 
+        message: emailSent ? "Invitation resent successfully" : "Invitation created but email failed to send", 
+        invitation: newInvitation,
+        emailSent 
+      });
     } catch (error) {
       console.error("Error resending invitation:", error);
       res.status(500).json({ message: "Failed to resend invitation" });
