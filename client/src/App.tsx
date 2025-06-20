@@ -5,6 +5,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { queryClient } from "./lib/queryClient";
 
+// Import layout component
+import DashboardLayout from "./components/layout/DashboardLayout";
+
 // Import new simplified pages
 import Dashboard from "./pages/Dashboard";
 import Income from "./pages/Income";
@@ -25,19 +28,19 @@ const App = () => (
         <Toaster />
         <BrowserRouter>
           <Routes>
-            {/* Main application routes */}
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/income" element={<Income />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/subscriptions" element={<Subscriptions />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/employees" element={<Employees />} />
-            
-            {/* Settings routes */}
-            <Route path="/settings/categories" element={<Categories />} />
-            <Route path="/settings/payment-sources" element={<PaymentSources />} />
-            <Route path="/settings/user-management" element={<UserManagement />} />
+            {/* Main application routes with dashboard layout */}
+            <Route path="/" element={<DashboardLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="income" element={<Income />} />
+              <Route path="expenses" element={<Expenses />} />
+              <Route path="subscriptions" element={<Subscriptions />} />
+              <Route path="employees" element={<Employees />} />
+              <Route path="clients" element={<Clients />} />
+              <Route path="settings/categories" element={<Categories />} />
+              <Route path="settings/payment-sources" element={<PaymentSources />} />
+              <Route path="settings/user-management" element={<UserManagement />} />
+            </Route>
             
             {/* Client dashboard for client users */}
             <Route path="/client-dashboard" element={<ClientDashboard />} />
