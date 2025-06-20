@@ -344,10 +344,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const rawRow = employeeData[i];
         const row = mapCsvFields(rawRow);
         
-        // Debug logging
-        console.log(`Row ${i + 1} raw:`, rawRow);
-        console.log(`Row ${i + 1} mapped:`, row);
-        
         // Validate required fields
         const name = row.name?.toString().trim();
         const email = row.email?.toString().trim();

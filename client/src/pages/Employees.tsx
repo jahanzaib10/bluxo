@@ -293,9 +293,12 @@ export default function Employees() {
                 Import CSV
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby="csv-import-description">
               <DialogHeader>
                 <DialogTitle>Import Employees from CSV</DialogTitle>
+                <div id="csv-import-description" className="text-sm text-gray-600">
+                  Upload a CSV file to import employee data. Preview and verify the data before importing.
+                </div>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="flex gap-2">
