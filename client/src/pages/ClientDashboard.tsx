@@ -165,7 +165,7 @@ export default function ClientDashboard() {
     );
   }
 
-  if (isLoading || !clientData) {
+  if (!clientData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
@@ -175,8 +175,6 @@ export default function ClientDashboard() {
       </div>
     );
   }
-
-  const data = dashboardData || clientData;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -189,8 +187,8 @@ export default function ClientDashboard() {
                 <Building className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">{data.client.name}</h1>
-                <p className="text-sm text-gray-500">{data.client.industry}</p>
+                <h1 className="text-xl font-semibold text-gray-900">{clientData.client.name}</h1>
+                <p className="text-sm text-gray-500">{clientData.client.industry}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={handleLogout}>
@@ -211,7 +209,7 @@ export default function ClientDashboard() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(data.dashboard.totalIncome)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(clientData.dashboard.totalIncome)}</div>
               <p className="text-xs text-muted-foreground">All time earnings</p>
             </CardContent>
           </Card>
@@ -222,7 +220,7 @@ export default function ClientDashboard() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(data.dashboard.monthlyIncome)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(clientData.dashboard.monthlyIncome)}</div>
               <p className="text-xs text-muted-foreground">Current month</p>
             </CardContent>
           </Card>
@@ -233,7 +231,7 @@ export default function ClientDashboard() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{data.dashboard.totalTransactions}</div>
+              <div className="text-2xl font-bold">{clientData.dashboard.totalTransactions}</div>
               <p className="text-xs text-muted-foreground">All time count</p>
             </CardContent>
           </Card>

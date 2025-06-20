@@ -1187,7 +1187,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.markTokenAsUsed(token);
       
-      res.json({ 
+      // Get complete dashboard data
+      const permissions = await storage.getClientPermissions(client.id);
+      const incomeRecords = await storage.getIncome();
+      const categories = await storage.getCategories();
+
+      // Filter income records for this client
+      const clientIncome = incomeRecords.filter(income => income.clientId === client.id);
+      
+      // Calculate totals and statistics
+      const totalIncome = clientIncome.reduce((sum, income) => sum + parseFloat(income.amount), 0);
+      const monthlyIncome = clientIncome
+        .filter(income => {
+          const incomeDate = new Date(income.date);
+          const now = new Date();
+          return incomeDate.getMonth() === now.getMonth() && incomeDate.getFullYear() === now.getFullYear();
+        })
+        .reduce((sum, income) => sum + parseFloat(income.amount), 0);
+
+      // Calculate category breakdown
+      const categoryBreakdown = categories.map(category => {
+        const categoryIncome = clientIncome.filter(income => income.categoryId === category.id);
+        const amount = categoryIncome.reduce((sum, income) => sum + parseFloat(income.amount), 0);
+        const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
+        return {
+          name: category.name,
+          amount,
+          percentage: Math.round(percentage * 100) / 100
+        };
+      }).filter(cat => cat.amount > 0);
+
+      res.json({
         client: {
           id: client.id,
           name: client.name,
@@ -1195,6 +1225,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: client.phone,
           website: client.website,
           industry: client.industry
+        },
+        permissions: permissions || {
+          showIncomeGraph: true,
+          showCategoryBreakdown: true,
+          showPaymentHistory: true,
+          showInvoices: false
+        },
+        dashboard: {
+          totalIncome,
+          monthlyIncome,
+          totalTransactions: clientIncome.length,
+          categoryBreakdown,
+          recentTransactions: clientIncome
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 10)
+            .map(income => ({
+              id: income.id,
+              date: income.date,
+              amount: `$${parseFloat(income.amount).toFixed(2)}`,
+              description: income.description || 'Income transaction',
+              status: income.status || 'paid'
+            }))
         }
       });
     } catch (error) {
