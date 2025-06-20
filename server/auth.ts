@@ -234,9 +234,10 @@ export async function login(req: Request, res: Response) {
 export async function signup(req: Request, res: Response) {
   try {
     const { username, password } = req.body;
+    const email = username; // Frontend sends username but it's actually email
 
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password are required' });
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
     }
 
     if (password.length < 6) {
@@ -244,22 +245,34 @@ export async function signup(req: Request, res: Response) {
     }
 
     // Check if user already exists
-    const existingUser = await storage.getUserByUsername(username);
+    const existingUser = await storage.getUserByEmail(email);
     if (existingUser) {
-      return res.status(409).json({ message: 'Username already exists' });
+      return res.status(409).json({ message: 'Email already exists' });
     }
 
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create user
+    // Create user with email as primary identifier
     const user = await storage.createUser({
-      username,
+      id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      email,
+      name: email.split('@')[0], // Use email prefix as default name
       password: hashedPassword,
+      role: 'admin', // First user becomes admin
+      type: 'internal',
+      status: 'active',
+      organizationId: null // Will be set when organization is created
     });
 
     // Generate token
-    const token = generateToken({ id: user.id, username: user.username });
+    const token = generateToken({ 
+      id: user.id, 
+      email: user.email,
+      role: user.role,
+      type: user.type,
+      organizationId: user.organizationId
+    });
 
     // Set HTTP-only cookie
     res.cookie('auth_token', token, {
@@ -274,7 +287,11 @@ export async function signup(req: Request, res: Response) {
       token,
       user: {
         id: user.id,
-        username: user.username,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        type: user.type,
+        organizationId: user.organizationId
       },
     });
   } catch (error) {
