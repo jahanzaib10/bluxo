@@ -37,6 +37,7 @@ export default function Clients() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [authToken, setAuthToken] = useState<string>("");
   const { toast } = useToast();
@@ -108,6 +109,26 @@ export default function Clients() {
     },
   });
 
+  const deleteClientMutation = useMutation({
+    mutationFn: (clientId: string) => apiRequest(`/api/clients/${clientId}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setIsDeleteModalOpen(false);
+      setSelectedClient(null);
+      toast({
+        title: "Success",
+        description: "Client deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const clientForm = useForm<ClientFormData>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: {
@@ -161,6 +182,17 @@ export default function Clients() {
   const openProfileModal = (client: Client) => {
     setSelectedClient(client);
     setIsProfileModalOpen(true);
+  };
+
+  const openDeleteModal = (client: Client) => {
+    setSelectedClient(client);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteClient = () => {
+    if (selectedClient) {
+      deleteClientMutation.mutate(selectedClient.id);
+    }
   };
 
   if (isLoading) {

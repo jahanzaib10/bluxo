@@ -1369,6 +1369,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete client
+  app.delete("/api/clients/:id", mockAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteClient(id);
+      
+      if (success) {
+        res.json({ message: "Client deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Client not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      res.status(500).json({ message: "Failed to delete client" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

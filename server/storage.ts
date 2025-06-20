@@ -187,10 +187,10 @@ export class DatabaseStorage implements IStorage {
       .onConflictDoUpdate({
         target: clientPermissions.clientId,
         set: {
-          showIncomeGraph: permissions.showIncomeGraph,
-          showCategoryBreakdown: permissions.showCategoryBreakdown,
-          showPaymentHistory: permissions.showPaymentHistory,
-          showInvoices: permissions.showInvoices,
+          show_income_graph: permissions.showIncomeGraph,
+          show_category_breakdown: permissions.showCategoryBreakdown,
+          show_payment_history: permissions.showPaymentHistory,
+          show_invoices: permissions.showInvoices,
           updatedAt: new Date(),
         },
       })
