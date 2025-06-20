@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, Upload, Search, Edit, Trash2, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -276,7 +277,7 @@ export default function Expenses() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Expenses</h1>
         <div className="flex space-x-2">
@@ -342,9 +343,18 @@ export default function Expenses() {
         />
       </div>
 
-      {/* Table */}
-      <div className="rounded-md border">
-        <Table>
+      {/* Expense Records Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Expense Records ({filteredExpenses.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredExpenses.length > 0 ? (
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Amount</TableHead>
@@ -403,7 +413,14 @@ export default function Expenses() {
             )}
           </TableBody>
         </Table>
-      </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No expense records found
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
