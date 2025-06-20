@@ -897,82 +897,101 @@ export default function Expenses() {
         <CardContent>
           {filteredExpenses.length > 0 ? (
             <div className="border rounded-lg overflow-hidden">
-              <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Amount</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Employee</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Recurring</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : filteredExpenses.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  No expense records found
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredExpenses.map((record: ExpenseRecord) => (
-                <TableRow key={record.id}>
-                  <TableCell className="font-medium">
-                    ${parseFloat(record.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{record.employeeName || 'N/A'}</TableCell>
-                  <TableCell>{record.categoryName || 'N/A'}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">
-                    {record.description || 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    {record.isRecurring ? (
-                      <div className="space-y-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {record.recurringFrequency?.charAt(0).toUpperCase() + record.recurringFrequency?.slice(1) || 'Recurring'}
-                        </Badge>
-                        {record.recurringEndDate && (
-                          <div className="text-xs text-muted-foreground">
-                            Until {new Date(record.recurringEndDate).toLocaleDateString()}
-                          </div>
-                        )}
-                      </div>
+              <div className="max-h-[600px] overflow-y-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-white z-10">
+                    <TableRow>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Recurring</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">
+                          Loading...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredExpenses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">
+                          No expense records found
+                        </TableCell>
+                      </TableRow>
                     ) : (
-                      <Badge variant="outline" className="text-xs">One-time</Badge>
+                      filteredExpenses.map((record: ExpenseRecord) => (
+                        <TableRow key={record.id}>
+                          <TableCell className="font-medium">
+                            ${parseFloat(record.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {record.employeeName ? (
+                              <div className="space-y-1">
+                                <div className="font-medium text-sm">{record.employeeName}</div>
+                                {record.employeeEmail && (
+                                  <div className="text-xs text-gray-500">{record.employeeEmail}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {record.categoryName ? (
+                              <span className="text-sm">{record.categoryName}</span>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {record.description || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {record.isRecurring ? (
+                              <div className="space-y-1">
+                                <Badge variant="secondary" className="text-xs">
+                                  {record.recurringFrequency?.charAt(0).toUpperCase() + record.recurringFrequency?.slice(1) || 'Recurring'}
+                                </Badge>
+                                {record.recurringEndDate && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Until {new Date(record.recurringEndDate).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">One-time</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(record)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(record.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(record)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(record.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">

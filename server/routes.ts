@@ -914,13 +914,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/expenses", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
+      
+      // Get expenses with enriched data
       const result = await db
-        .select()
+        .select({
+          id: expenses.id,
+          amount: expenses.amount,
+          description: expenses.description,
+          date: expenses.date,
+          isRecurring: expenses.isRecurring,
+          recurringFrequency: expenses.recurringFrequency,
+          recurringEndDate: expenses.recurringEndDate,
+          createdAt: expenses.createdAt,
+          employeeId: expenses.employeeId,
+          categoryId: expenses.categoryId,
+          employeeName: employees.name,
+          employeeEmail: employees.email,
+          categoryName: categories.name,
+          categoryParentId: categories.parentId,
+        })
         .from(expenses)
+        .leftJoin(employees, eq(expenses.employeeId, employees.id))
+        .leftJoin(categories, eq(expenses.categoryId, categories.id))
         .where(eq(expenses.organizationId, organizationId))
         .orderBy(desc(expenses.createdAt));
+
+      // Get all categories to build hierarchical names
+      const allCategories = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.organizationId, organizationId));
+
+      // Enrich results with hierarchical category names
+      const enrichedResult = result.map(expense => {
+        let hierarchicalCategoryName = expense.categoryName;
+        
+        if (expense.categoryName && expense.categoryParentId) {
+          const parentCategory = allCategories.find(c => c.id === expense.categoryParentId);
+          if (parentCategory) {
+            hierarchicalCategoryName = `${parentCategory.name} → ${expense.categoryName}`;
+          }
+        }
+        
+        return {
+          ...expense,
+          categoryName: hierarchicalCategoryName,
+          employeeName: expense.employeeName || null,
+          employeeEmail: expense.employeeEmail || null
+        };
+      });
       
-      res.json(result);
+      res.json(enrichedResult);
     } catch (error) {
       console.error("Error fetching expenses:", error);
       res.status(500).json({ message: "Failed to fetch expenses" });
