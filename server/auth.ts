@@ -166,7 +166,8 @@ export async function validateClientToken(req: Request, res: Response, next: Nex
 // Login handler
 export async function login(req: Request, res: Response) {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
+    const email = username; // Frontend sends username but it's actually email
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
@@ -302,7 +303,14 @@ export async function getCurrentUser(req: AuthRequest, res: Response) {
 
     res.json({
       id: user.id,
-      username: user.username,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      type: user.type,
+      organizationId: user.organizationId,
+      status: user.status,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
     });
   } catch (error) {
     console.error('Get current user error:', error);
