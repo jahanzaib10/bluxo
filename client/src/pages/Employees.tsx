@@ -191,6 +191,44 @@ export default function Employees() {
     }
   };
 
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const mapCSVFieldToEmployee = (csvData: any) => {
+    return {
+      name: csvData['Worker Full Name'] || csvData['Name'] || '',
+      email: csvData['Personal Email'] || csvData['Email'] || '',
+      position: csvData['Job Title'] || csvData['Position'] || '',
+      country: csvData['Country of Residence'] || csvData['Country'] || '',
+      startDate: csvData['Start Date'] || csvData['start_date'] || '',
+      endDate: csvData['End Date'] || csvData['end_date'] || '',
+      birthDate: csvData['Birth date'] || csvData['birth_date'] || '',
+      seniorityLevel: csvData['Seniority'] || csvData['seniority_level'] || '',
+      paymentAmount: csvData['Payment Amount'] || csvData['payment_amount'] || '',
+      directManagerId: csvData['Direct Manager Name'] || csvData['manager'] || '',
+      groupName: csvData['Group'] || csvData['group_name'] || '',
+      status: 'active'
+    };
+  };
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -199,15 +237,15 @@ export default function Employees() {
     reader.onload = (e) => {
       const csv = e.target?.result as string;
       const lines = csv.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim());
+      const headers = parseCSVLine(lines[0]);
       
       const data = lines.slice(1).map(line => {
-        const values = line.split(',').map(v => v.trim());
+        const values = parseCSVLine(line);
         const obj: any = {};
         headers.forEach((header, index) => {
-          obj[header] = values[index] || null;
+          obj[header] = values[index] || '';
         });
-        return obj;
+        return mapCSVFieldToEmployee(obj);
       });
       
       setCsvData(data);
@@ -255,7 +293,7 @@ export default function Employees() {
                 Import CSV
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Import Employees from CSV</DialogTitle>
               </DialogHeader>
@@ -295,8 +333,8 @@ export default function Employees() {
                         First row data: {JSON.stringify(csvPreview[0], null, 2)}
                       </div>
                     )}
-                    <div className="border rounded-lg overflow-hidden">
-                      <Table>
+                    <div className="border rounded-lg overflow-x-auto">
+                      <Table className="min-w-max">
                         <TableHeader>
                           <TableRow>
                             <TableHead>Name</TableHead>
@@ -315,17 +353,17 @@ export default function Employees() {
                         <TableBody>
                           {csvPreview.slice(0, 5).map((row, index) => (
                             <TableRow key={index}>
-                              <TableCell>{row.name || row.Name || "—"}</TableCell>
-                              <TableCell>{row.email || row.Email || "—"}</TableCell>
-                              <TableCell>{row.position || row.Position || row.job_title || row["Job Title"] || "—"}</TableCell>
-                              <TableCell>{row.group_name || row["Group Name"] || row.group || row.Group || "—"}</TableCell>
-                              <TableCell>{row.seniority_level || row["Seniority Level"] || row.level || row.Level || "—"}</TableCell>
-                              <TableCell>{row.payment_amount || row["Payment Amount"] || row.salary || row.Salary || "—"}</TableCell>
-                              <TableCell>{row.start_date || row["Start Date"] || row.hire_date || row["Hire Date"] || "—"}</TableCell>
-                              <TableCell>{row.end_date || row["End Date"] || row.termination_date || row["Termination Date"] || "—"}</TableCell>
-                              <TableCell>{row.birth_date || row["Birth Date"] || row.dob || row.DOB || "—"}</TableCell>
-                              <TableCell>{row.direct_manager_name || row["Direct Manager"] || row.manager || row.Manager || row.supervisor || row.Supervisor || "—"}</TableCell>
-                              <TableCell>{row.status || row.Status || "active"}</TableCell>
+                              <TableCell>{row.name || "—"}</TableCell>
+                              <TableCell>{row.email || "—"}</TableCell>
+                              <TableCell>{row.position || "—"}</TableCell>
+                              <TableCell>{row.groupName || "—"}</TableCell>
+                              <TableCell>{row.seniorityLevel || "—"}</TableCell>
+                              <TableCell>{row.paymentAmount || "—"}</TableCell>
+                              <TableCell>{row.startDate || "—"}</TableCell>
+                              <TableCell>{row.endDate || "—"}</TableCell>
+                              <TableCell>{row.birthDate || "—"}</TableCell>
+                              <TableCell>{row.directManagerId || "—"}</TableCell>
+                              <TableCell>{row.status || "active"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

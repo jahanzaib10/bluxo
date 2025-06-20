@@ -1,0 +1,34 @@
+Worker ID,Worker Full Name,Country of Residence,Group,Start Date,Personal Email,Birth date,Job Title,Seniority,End Date,Payment Amount,Direct Manager Name
+1,Bilal Sohail,PK,Development,2023-01-30,bilal@iclosed.io,1998-03-19,Technical Project Manager,Director,,"4,850.00",Jahanzaib Sohail
+3,Shahab U Din Hamid,PK,Development,2022-10-01,shahabhamid020@gmail.com,2001-06-26,Senior Software Engineer,Mid (Individual Contributor Level 2),,"3,335.00",Muhammad Assis Wasiq
+4,Maha Aftab,PK,Development,2024-01-01,mahaftab02@gmail.com,2002-05-15,Software Engineer,Junior (Individual Contributor Level 1),,"1,100.00",Muhammad Assis Wasiq
+5,Zarrar Ahmed Khan,PK,Quality Assurance,2022-11-28,zarrar1961@gmail.com,1991-08-01,Quality Assurance Engineer,Lead (Individual Contributor Level 4),,"3,300.00",Bilal Sohail
+6,nayyab bilal,PK,Quality Assurance,2023-01-07,nayabamir15@gmail.com,1999-06-15,Quality Assurance Engineer,Mid (Individual Contributor Level 2),,"1,320.00",Zarrar Ahmed Khan
+7,Sadeel Anju,PK,DevOps,2024-02-22,sadeel094@gmail.com,1994-11-14,Cloud Architect,Lead (Individual Contributor Level 4),,"4,000.00",Bilal Sohail
+8,Muhammad Zain Javed,PK,Quality Assurance,2023-12-01,zainjaved119@gmail.com,1997-12-07,Quality Assurance Engineer,Senior (Individual Contributor Level 3),,"1,420.00",Zarrar Ahmed Khan
+9,Nabeel Ahmed Qureshi,PK,Development,2023-02-01,nabeel.ahmed0026@gmail.com,2001-08-07,Software Engineer,Mid (Individual Contributor Level 2),,"2,300.00",Muhammad Assis Wasiq
+10,Syed Furqan Arshad,PK,Development,2022-12-05,furqanarshad98.fa@gmail.com,1998-07-02,Software Engineer,Mid (Individual Contributor Level 2),,"1,850.00",Muhammad Assis Wasiq
+11,Syed Muhammad Askari Zaidi,PK,Development,2023-12-01,askari005@gmail.com,1998-08-31,Software Engineer,Mid (Individual Contributor Level 2),,"1,440.00",Muhammad Assis Wasiq
+12,Ahmed Bin Yasin,PK,Development,2023-12-01,ahmed116046@gmail.com,1999-11-04,Software Engineer,Junior (Individual Contributor Level 1),,960.00,Muhammad Assis Wasiq
+13,Abdul Rehman Zahoor,PK,Quality Assurance,2023-10-01,myjmail92@gmail.com,1995-02-18,Quality Assurance Engineer,Junior (Individual Contributor Level 1),,800.00,Zarrar Ahmed Khan
+15,Usama Imtiaz,PK,Development,2024-09-01,iusamakhawaja@gmail.com,1996-11-21,Principal Software Engineer,Lead (Individual Contributor Level 4),,"2,730.00",Jahanzaib Sohail
+16,Muhammad Saim,PK,Development,2024-10-14,m.saim.senior@gmail.com,1999-12-30,Senior Software Engineer,Senior (Individual Contributor Level 3),,"1,700.00",Usama Imtiaz
+17,Syed Shahid Arshad,PK,Development,2024-10-14,shahidarshad2000@gmail.com,2000-01-29,Software Engineer,Mid (Individual Contributor Level 2),,"1,600.00",Usama Imtiaz
+18,Qasim Zahid,US,Design,2022-10-01,qasimzahid41@gmail.com,1994-07-10,Product Designer,Lead (Individual Contributor Level 4),,"7,000.00",Bilal Sohail
+19,Muhammad Assis Wasiq,PK,Development,2022-11-10,assisbutt123@gmail.com,1995-01-15,Technical Lead,Principal / Staff (Individual Contributor Level 5),,"3,700.00",Bilal Sohail
+20,Jovan Nanic,RS,Customer Support,2024-09-01,nanic.jovan@gmail.com,1983-06-12,Customer Support Executive,Senior (Individual Contributor Level 3),,"1,800.00",Bilal Sohail
+21,Zain Ul Abideen,PK,Design,2024-05-21,zain.zahidr@gmail.com,2000-11-12,Product Designer,Mid (Individual Contributor Level 2),,"1,100.00",Qasim Zahid
+23,Muhammad Shaban Yousaf,PK,Development,2024-11-12,shaban.yousaf2@gmail.com,2001-10-30,Software Engineer,Junior (Individual Contributor Level 1),,360.00,Muhammad Assis Wasiq
+24,Muhammad Manan Qasim,PK,Management,2024-12-16,mananqasim@hotmail.com,1996-07-23,Technical Project Manager,Senior (Individual Contributor Level 3),,"2,200.00",Bilal Sohail
+27,Danial Javed,PK,Development,2025-02-01,daniiyaaljaved@gmail.com,1998-01-30,Senior Software Engineer,Senior (Individual Contributor Level 3),2026-01-31,"1,620.00",Bilal Sohail
+28,Muhammad Haider Khan,PK,Development,2025-01-01,haiderkhan.live@gmail.com,1992-03-02,Senior Software Engineer,Principal / Staff (Individual Contributor Level 5),,"2,400.00",Muhammad Assis Wasiq
+29,Zahab Shahzad,PK,Development,2025-01-20,zahab44@gmail.com,1997-06-10,Senior Ai Engineer,Senior (Individual Contributor Level 3),,800.00,Bilal Sohail
+30,Nimra Khalid,PK,Human Resources,2025-01-21,nimra.25@hotmail.com,1996-03-12,Human Resources Executive,Senior (Individual Contributor Level 3),,505.00,Bilal Sohail
+31,Osama Nadeem,PK,Design,2025-01-27,heyy.osama@gmail.com,1996-02-09,Product Designer,Senior (Individual Contributor Level 3),,"1,850.00",Qasim Zahid
+32,Saman Kamran,US,Design,2025-03-18,sstoor98@gmail.com,1998-02-04,Ux Designer,Junior (Individual Contributor Level 1),2025-06-30,500.00,Qasim Zahid
+33,ABDUL  REHMAN CH,PK,Development,2025-03-21,arcoffical1@gmail.com,2005-07-20,Software Engineer,Junior (Individual Contributor Level 1),,145.00,Muhammad Assis Wasiq
+34,Noman Javaid,PK,Development,2025-04-17,nomanjavaid1997@gmail.com,1997-12-04,Senior Software Engineer,Senior (Individual Contributor Level 3),,"1,430.00",Muhammad Assis Wasiq
+35,Shayan Gaieb,ID,Sales,2025-01-01,gaiebshayan@gmail.com,1998-01-21,Sales Executive,Senior (Individual Contributor Level 3),,,Bilal Sohail
+36,Sana Sajid,PK,Development,2025-06-01,sanasajidtoor98@gmail.com,1998-12-24,Software Engineer,Mid (Individual Contributor Level 2),,"1,400.00",Muhammad Assis Wasiq
+37,Muhammad Muneeb Ul Rehman Naeem,PK,Development,2025-05-21,muneeb.naem@gmail.com,2000-01-27,Senior Software Engineer,Senior (Individual Contributor Level 3),,"2,100.00",Muhammad Assis Wasiq
+38,Ahmed Waleed Afzal,PK,Customer Support,2025-06-01,the.ahmedwaleed@gmail.com,2001-02-12,Customer Success,Mid (Individual Contributor Level 2),,"1,400.00",Jovan Nanic
