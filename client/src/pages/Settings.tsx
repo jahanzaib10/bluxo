@@ -23,7 +23,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import UserManagement from '@/pages/UserManagement';
+import UserManagement from '@/pages/settings/UserManagement';
 
 // Form schemas
 const profileSchema = z.object({
