@@ -37,6 +37,8 @@ export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [csvData, setCsvData] = useState<any[]>([]);
   const [csvPreview, setCsvPreview] = useState<any[]>([]);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -123,11 +125,7 @@ export default function Employees() {
 
   const importMutation = useMutation({
     mutationFn: async (employeeData: any[]) => {
-      await apiRequest("/api/employees/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employees: employeeData }),
-      });
+      return await apiRequest("/api/employees/import", "POST", { employees: employeeData });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
@@ -135,6 +133,7 @@ export default function Employees() {
       setIsImportOpen(false);
       setCsvData([]);
       setCsvPreview([]);
+      setShowPreview(false);
     },
     onError: () => {
       toast({ title: "Failed to import employees", variant: "destructive" });
@@ -212,7 +211,9 @@ export default function Employees() {
       });
       
       setCsvData(data);
-      setCsvPreview(data.slice(0, 5)); // Show first 5 rows for preview
+      setCsvPreview(data);
+      setCsvHeaders(headers);
+      setShowPreview(true);
     };
     reader.readAsText(file);
   };
@@ -282,9 +283,18 @@ export default function Employees() {
                   </Button>
                 </div>
                 
-                {csvPreview.length > 0 && (
+                {showPreview && csvPreview.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-2">Preview ({csvData.length} total records)</h3>
+                    {/* Debug info to see headers and first row data */}
+                    <div className="text-xs text-gray-600 mb-2">
+                      CSV Headers: {csvHeaders.join(", ")}
+                    </div>
+                    {csvPreview.length > 0 && (
+                      <div className="text-xs text-gray-600 mb-2">
+                        First row data: {JSON.stringify(csvPreview[0], null, 2)}
+                      </div>
+                    )}
                     <div className="border rounded-lg overflow-hidden">
                       <Table>
                         <TableHeader>
@@ -303,19 +313,19 @@ export default function Employees() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {csvPreview.map((row, index) => (
+                          {csvPreview.slice(0, 5).map((row, index) => (
                             <TableRow key={index}>
-                              <TableCell>{row.name || "—"}</TableCell>
-                              <TableCell>{row.email || "—"}</TableCell>
-                              <TableCell>{row.position || row.job_title || "—"}</TableCell>
-                              <TableCell>{row.group_name || row.group || "—"}</TableCell>
-                              <TableCell>{row.seniority_level || row.level || "—"}</TableCell>
-                              <TableCell>{row.payment_amount || row.salary || "—"}</TableCell>
-                              <TableCell>{row.start_date || row.hire_date || "—"}</TableCell>
-                              <TableCell>{row.end_date || row.termination_date || "—"}</TableCell>
-                              <TableCell>{row.birth_date || row.dob || "—"}</TableCell>
-                              <TableCell>{row.direct_manager_name || row.manager || row.supervisor || "—"}</TableCell>
-                              <TableCell>{row.status || "active"}</TableCell>
+                              <TableCell>{row.name || row.Name || "—"}</TableCell>
+                              <TableCell>{row.email || row.Email || "—"}</TableCell>
+                              <TableCell>{row.position || row.Position || row.job_title || row["Job Title"] || "—"}</TableCell>
+                              <TableCell>{row.group_name || row["Group Name"] || row.group || row.Group || "—"}</TableCell>
+                              <TableCell>{row.seniority_level || row["Seniority Level"] || row.level || row.Level || "—"}</TableCell>
+                              <TableCell>{row.payment_amount || row["Payment Amount"] || row.salary || row.Salary || "—"}</TableCell>
+                              <TableCell>{row.start_date || row["Start Date"] || row.hire_date || row["Hire Date"] || "—"}</TableCell>
+                              <TableCell>{row.end_date || row["End Date"] || row.termination_date || row["Termination Date"] || "—"}</TableCell>
+                              <TableCell>{row.birth_date || row["Birth Date"] || row.dob || row.DOB || "—"}</TableCell>
+                              <TableCell>{row.direct_manager_name || row["Direct Manager"] || row.manager || row.Manager || row.supervisor || row.Supervisor || "—"}</TableCell>
+                              <TableCell>{row.status || row.Status || "active"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
