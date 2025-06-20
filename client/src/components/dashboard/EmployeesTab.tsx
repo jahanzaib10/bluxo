@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataTable, DataTableColumn, DataTableAction } from '@/components/ui/data-table';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, User, ArrowLeft, Upload, Settings, Search, Users, Calendar, Briefcase } from 'lucide-react';
+import { Plus, Edit, Trash2, User, ArrowLeft, Upload, Settings, Search } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { apiRequest } from '@/lib/queryClient';
@@ -35,13 +36,14 @@ export function EmployeesTab() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // First get all employees
   const { data: employees = [] } = useQuery({
     queryKey: ['/api/employees'],
   });
 
-  // Create enriched employees with manager information
-  const enrichedEmployees = useMemo(() => {
-    if (!Array.isArray(employees)) return [];
+  // Then get manager information separately and merge
+  const enrichedEmployees = React.useMemo(() => {
+    if (!employees.length) return [];
     
     // Create a map of employee ID to employee info for manager lookup
     const employeeMap = employees.reduce((acc: any, emp: any) => {
@@ -59,10 +61,10 @@ export function EmployeesTab() {
   }, [employees]);
 
   // Filter employees based on search
-  const filteredEmployees = useMemo(() => {
-    if (!searchValue) return enrichedEmployees;
+  const filteredEmployees = enrichedEmployees.filter((employee: any) => {
+    if (!searchValue) return true;
     const searchLower = searchValue.toLowerCase();
-    return enrichedEmployees.filter((employee: any) => 
+    return (
       employee.workerFullName?.toLowerCase().includes(searchLower) ||
       employee.jobTitle?.toLowerCase().includes(searchLower) ||
       employee.personalEmail?.toLowerCase().includes(searchLower) ||
@@ -70,7 +72,7 @@ export function EmployeesTab() {
       employee.groupName?.toLowerCase().includes(searchLower) ||
       employee.directManager?.workerFullName?.toLowerCase().includes(searchLower)
     );
-  }, [enrichedEmployees, searchValue]);
+  });
 
   const createEmployee = useMutation({
     mutationFn: async (data: any) => {
@@ -127,7 +129,7 @@ export function EmployeesTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
-      toast({ title: "Success", description: "Employee deleted successfully." });
+      toast({ title: "Success", description: "Employee archived successfully." });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -151,15 +153,6 @@ export function EmployeesTab() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingEmployee) {
-      updateEmployee.mutate({ id: editingEmployee.id, ...formData });
-    } else {
-      createEmployee.mutate(formData);
-    }
-  };
-
   const handleEdit = (employee: any) => {
     setEditingEmployee(employee);
     setFormData({
@@ -173,15 +166,19 @@ export function EmployeesTab() {
       seniority: employee.seniority || '',
       endDate: employee.endDate || '',
       paymentAmount: employee.paymentAmount?.toString() || '',
-      directManagerId: employee.directManagerId || '',
+      directManagerId: employee.directManagerId || 'no-manager',
       comments: employee.comments || ''
     });
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this employee?')) {
-      deleteEmployee.mutate(id);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editingEmployee) {
+      updateEmployee.mutate({ ...formData, id: editingEmployee.id });
+    } else {
+      createEmployee.mutate(formData);
     }
   };
 
@@ -191,319 +188,417 @@ export function EmployeesTab() {
     resetFormData();
   };
 
-  // Calculate stats
-  const activeEmployees = Array.isArray(employees) ? employees.filter((emp: any) => !emp.endDate) : [];
-  const managersCount = Array.isArray(employees) ? new Set(employees.map((emp: any) => emp.directManagerId).filter(Boolean)).size : 0;
+  const handleViewProfile = (employee: any) => {
+    setSelectedEmployee(employee);
+  };
+
+  const handleBackToList = () => {
+    setSelectedEmployee(null);
+  };
+
+  // Define table columns with fixed manager display
+  const columns: DataTableColumn[] = [
+    {
+      key: 'workerId',
+      label: 'Worker ID',
+      minWidth: '80px',
+      render: (employee) => (
+        <span className="font-mono text-sm">{employee.workerId || '-'}</span>
+      )
+    },
+    {
+      key: 'workerFullName',
+      label: 'Full Name',
+      minWidth: '200px',
+      render: (employee) => (
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 flex-shrink-0" />
+          <div className="font-medium truncate">{employee.workerFullName}</div>
+        </div>
+      )
+    },
+    {
+      key: 'jobTitle',
+      label: 'Job Title',
+      minWidth: '150px',
+      render: (employee) => (
+        <span className="truncate">{employee.jobTitle || '-'}</span>
+      )
+    },
+    {
+      key: 'countryOfResidence',
+      label: 'Country',
+      minWidth: '120px',
+      render: (employee) => (
+        <span className="truncate">{employee.countryOfResidence || '-'}</span>
+      )
+    },
+    {
+      key: 'groupName',
+      label: 'Group',
+      minWidth: '120px',
+      render: (employee) => (
+        <span className="truncate">{employee.groupName || '-'}</span>
+      )
+    },
+    {
+      key: 'directManager',
+      label: 'Manager',
+      minWidth: '150px',
+      render: (employee) => (
+        <span className="truncate">{employee.directManager?.workerFullName || '-'}</span>
+      )
+    },
+    {
+      key: 'startDate',
+      label: 'Start Date',
+      minWidth: '120px',
+      render: (employee) => (
+        <span>{employee.startDate ? new Date(employee.startDate).toLocaleDateString() : '-'}</span>
+      )
+    },
+    {
+      key: 'personalEmail',
+      label: 'Email',
+      minWidth: '200px',
+      render: (employee) => (
+        <span className="truncate">{employee.personalEmail || '-'}</span>
+      )
+    }
+  ];
+
+  // Define table actions
+  const actions: DataTableAction[] = [
+    {
+      label: 'View',
+      icon: <User className="h-4 w-4" />,
+      onClick: handleViewProfile,
+      variant: 'outline'
+    },
+    {
+      label: 'Edit',
+      icon: <Edit className="h-4 w-4" />,
+      onClick: handleEdit,
+      variant: 'outline'
+    },
+    {
+      label: 'Archive',
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: (employee) => deleteEmployee.mutate(employee.id),
+      variant: 'outline'
+    }
+  ];
+
+  if (selectedEmployee) {
+    return (
+      <div className="w-full max-w-full h-screen flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6">
+            <Card className="border-slate-200 shadow-lg bg-gradient-to-br from-white to-slate-50">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="sm" onClick={handleBackToList}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <CardTitle className="text-slate-800">Employee Profile</CardTitle>
+                    <CardDescription>
+                      Detailed information for {selectedEmployee.workerFullName}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-slate-600">Full Name</Label>
+                      <p className="text-slate-900">{selectedEmployee.workerFullName}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-slate-600">Job Title</Label>
+                      <p className="text-slate-900">{selectedEmployee.jobTitle || '-'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-slate-600">Country</Label>
+                      <p className="text-slate-900">{selectedEmployee.countryOfResidence || '-'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-slate-600">Group</Label>
+                      <p className="text-slate-900">{selectedEmployee.groupName || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-slate-600">Email</Label>
+                      <p className="text-slate-900">{selectedEmployee.personalEmail || '-'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-slate-600">Start Date</Label>
+                      <p className="text-slate-900">{selectedEmployee.startDate ? new Date(selectedEmployee.startDate).toLocaleDateString() : '-'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-slate-600">Direct Manager</Label>
+                      <p className="text-slate-900">{selectedEmployee.directManager?.workerFullName || '-'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-slate-600">Seniority</Label>
+                      <p className="text-slate-900">{selectedEmployee.seniority || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+                {selectedEmployee.comments && (
+                  <div className="mt-6">
+                    <Label className="text-sm font-medium text-slate-600">Comments</Label>
+                    <p className="text-slate-900 mt-1">{selectedEmployee.comments}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header with Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Array.isArray(employees) ? employees.length : 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {activeEmployees.length} active
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Managers</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {managersCount}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Direct managers
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New This Month</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Array.isArray(employees) ? employees.filter((emp: any) => {
-                if (!emp.startDate) return false;
-                const startDate = new Date(emp.startDate);
-                const currentDate = new Date();
-                return startDate.getMonth() === currentDate.getMonth() && 
-                       startDate.getFullYear() === currentDate.getFullYear();
-              }).length : 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Started this month
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search employees..."
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            className="w-64"
-          />
-        </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Employee
-        </Button>
-      </div>
-
-      {/* Employee List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Employee Directory</CardTitle>
-          <CardDescription>Manage employee profiles and organizational structure</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredEmployees.map((employee: any) => (
-              <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <h3 className="font-medium">{employee.workerFullName}</h3>
-                    {employee.jobTitle && (
-                      <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                        {employee.jobTitle}
-                      </span>
-                    )}
+    <div className="w-full max-w-full h-screen flex flex-col overflow-hidden">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6">
+          {showForm && (
+            <Card className="border-slate-200 shadow-lg bg-gradient-to-br from-white to-slate-50">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+                <CardTitle className="text-slate-800">{editingEmployee ? 'Edit Employee' : 'Add New Employee'}</CardTitle>
+                <CardDescription>
+                  {editingEmployee ? 'Update employee information' : 'Create a new employee record'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="workerFullName">Full Name</Label>
+                      <Input
+                        id="workerFullName"
+                        value={formData.workerFullName}
+                        onChange={(e) => setFormData({ ...formData, workerFullName: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="personalEmail">Personal Email</Label>
+                      <Input
+                        id="personalEmail"
+                        type="email"
+                        value={formData.personalEmail}
+                        onChange={(e) => setFormData({ ...formData, personalEmail: e.target.value })}
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {employee.personalEmail && (
-                      <span>📧 {employee.personalEmail}</span>
-                    )}
-                    {employee.countryOfResidence && (
-                      <span>🌍 {employee.countryOfResidence}</span>
-                    )}
-                    {employee.directManager && (
-                      <span>👤 Reports to: {employee.directManager.workerFullName}</span>
-                    )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="jobTitle">Job Title</Label>
+                      <Input
+                        id="jobTitle"
+                        value={formData.jobTitle}
+                        onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="countryOfResidence">Country of Residence</Label>
+                      <Input
+                        id="countryOfResidence"
+                        value={formData.countryOfResidence}
+                        onChange={(e) => setFormData({ ...formData, countryOfResidence: e.target.value })}
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {employee.groupName && (
-                      <span>Team: {employee.groupName}</span>
-                    )}
-                    {employee.seniority && (
-                      <span>Level: {employee.seniority}</span>
-                    )}
-                    {employee.startDate && (
-                      <span>Started: {new Date(employee.startDate).toLocaleDateString()}</span>
-                    )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="groupName">Group Name</Label>
+                      <Input
+                        id="groupName"
+                        value={formData.groupName}
+                        onChange={(e) => setFormData({ ...formData, groupName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="seniority">Seniority</Label>
+                      <Select
+                        value={formData.seniority}
+                        onValueChange={(value) => setFormData({ ...formData, seniority: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select seniority level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Junior">Junior</SelectItem>
+                          <SelectItem value="Mid">Mid</SelectItem>
+                          <SelectItem value="Senior">Senior</SelectItem>
+                          <SelectItem value="Lead">Lead</SelectItem>
+                          <SelectItem value="Principal">Principal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate">Start Date</Label>
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="birthDate">Birth Date</Label>
+                      <Input
+                        id="birthDate"
+                        type="date"
+                        value={formData.birthDate}
+                        onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endDate">End Date</Label>
+                      <Input
+                        id="endDate"
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="directManagerId">Direct Manager</Label>
+                      <Select
+                        value={formData.directManagerId}
+                        onValueChange={(value) => setFormData({ ...formData, directManagerId: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no-manager">No Manager</SelectItem>
+                          {employees
+                            .filter((emp: any) => emp.id !== editingEmployee?.id)
+                            .map((employee: any) => (
+                              <SelectItem key={employee.id} value={employee.id}>
+                                {employee.workerFullName}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="paymentAmount">Payment Amount</Label>
+                      <Input
+                        id="paymentAmount"
+                        type="number"
+                        step="0.01"
+                        value={formData.paymentAmount}
+                        onChange={(e) => setFormData({ ...formData, paymentAmount: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="comments">Comments</Label>
+                    <Textarea
+                      id="comments"
+                      value={formData.comments}
+                      onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button type="submit">
+                      {editingEmployee ? 'Update' : 'Create'} Employee
+                    </Button>
+                    <Button type="button" variant="outline" onClick={resetForm}>
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="border-slate-200 shadow-lg bg-gradient-to-br from-white to-slate-50">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-slate-800">Employees</CardTitle>
+                  <CardDescription>
+                    Manage your employees and their information.
+                  </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(employee)}>
-                    <Edit className="h-4 w-4" />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline">
+                    <Upload className="h-4 w-4 mr-1" />
+                    Import CSV
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleDelete(employee.id)}>
-                    <Trash2 className="h-4 w-4" />
+                  <Button size="sm" onClick={() => setShowForm(true)} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
                   </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64" align="end">
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-sm">Toggle columns</h4>
+                        <div className="space-y-2">
+                          {columns.map((column) => (
+                            <div key={column.key} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={column.key}
+                                checked={true}
+                                onCheckedChange={() => {}}
+                              />
+                              <label htmlFor={column.key} className="text-sm font-normal">
+                                {column.label}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
-            ))}
-            {filteredEmployees.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                {searchValue ? 'No employees match your search' : 'No employees found'}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Add/Edit Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingEmployee ? 'Edit Employee' : 'Add New Employee'}</CardTitle>
-            <CardDescription>
-              {editingEmployee ? 'Update employee information' : 'Enter details for the new employee'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="workerFullName">Full Name</Label>
-                  <Input
-                    id="workerFullName"
-                    value={formData.workerFullName}
-                    onChange={(e) => setFormData({ ...formData, workerFullName: e.target.value })}
-                    placeholder="Enter full name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="personalEmail">Email</Label>
-                  <Input
-                    id="personalEmail"
-                    type="email"
-                    value={formData.personalEmail}
-                    onChange={(e) => setFormData({ ...formData, personalEmail: e.target.value })}
-                    placeholder="Enter email address"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="jobTitle">Job Title</Label>
-                  <Input
-                    id="jobTitle"
-                    value={formData.jobTitle}
-                    onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                    placeholder="Enter job title"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="seniority">Seniority Level</Label>
-                  <Select
-                    value={formData.seniority}
-                    onValueChange={(value) => setFormData({ ...formData, seniority: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select seniority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Junior">Junior</SelectItem>
-                      <SelectItem value="Mid">Mid</SelectItem>
-                      <SelectItem value="Senior">Senior</SelectItem>
-                      <SelectItem value="Lead">Lead</SelectItem>
-                      <SelectItem value="Principal">Principal</SelectItem>
-                      <SelectItem value="Manager">Manager</SelectItem>
-                      <SelectItem value="Director">Director</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="groupName">Team/Group</Label>
-                  <Input
-                    id="groupName"
-                    value={formData.groupName}
-                    onChange={(e) => setFormData({ ...formData, groupName: e.target.value })}
-                    placeholder="Enter team or group name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="countryOfResidence">Country</Label>
-                  <Input
-                    id="countryOfResidence"
-                    value={formData.countryOfResidence}
-                    onChange={(e) => setFormData({ ...formData, countryOfResidence: e.target.value })}
-                    placeholder="Enter country of residence"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="birthDate">Birth Date</Label>
-                  <Input
-                    id="birthDate"
-                    type="date"
-                    value={formData.birthDate}
-                    onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="directManagerId">Direct Manager</Label>
-                  <Select
-                    value={formData.directManagerId}
-                    onValueChange={(value) => setFormData({ ...formData, directManagerId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select manager" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no-manager">No Manager</SelectItem>
-                      {Array.isArray(employees) && employees
-                        .filter((emp: any) => emp.id !== editingEmployee?.id)
-                        .map((employee: any) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            {employee.workerFullName}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="paymentAmount">Payment Amount</Label>
-                  <Input
-                    id="paymentAmount"
-                    type="number"
-                    step="0.01"
-                    value={formData.paymentAmount}
-                    onChange={(e) => setFormData({ ...formData, paymentAmount: e.target.value })}
-                    placeholder="Enter payment amount"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="comments">Comments</Label>
-                <Textarea
-                  id="comments"
-                  value={formData.comments}
-                  onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
-                  placeholder="Additional notes or comments..."
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="p-6">
+                <DataTable
+                  data={filteredEmployees}
+                  columns={columns}
+                  actions={actions}
+                  height="60vh"
+                  stickyActions={true}
+                  configurableColumns={false}
+                  storageKey="employeesColumnPreferences"
+                  showColumnConfig={false}
+                  searchValue={searchValue}
+                  onSearchChange={setSearchValue}
+                  searchPlaceholder="Search employees..."
                 />
               </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createEmployee.isPending || updateEmployee.isPending}>
-                  {editingEmployee ? 'Update' : 'Create'} Employee
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

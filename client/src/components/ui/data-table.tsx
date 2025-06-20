@@ -1,187 +1,144 @@
+import React, { useState, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Search } from 'lucide-react';
 
-import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Settings, Search } from "lucide-react";
-
-export interface DataTableColumn<T = any> {
+export interface DataTableColumn {
   key: string;
   label: string;
   minWidth?: string;
-  render?: (item: T) => React.ReactNode;
-  className?: string;
+  render?: (item: any) => React.ReactNode;
+  sortable?: boolean;
 }
 
-export interface DataTableAction<T = any> {
+export interface DataTableAction {
   label: string;
-  icon: React.ReactNode;
-  onClick: (item: T) => void;
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  icon?: React.ReactNode;
+  onClick: (item: any) => void;
+  variant?: 'default' | 'outline' | 'ghost';
+  className?: string;
 }
 
-export interface DataTableProps<T = any> {
-  data: T[];
-  columns: DataTableColumn<T>[];
-  actions?: DataTableAction<T>[];
-  onRowClick?: (item: T) => void;
-  className?: string;
+interface DataTableProps {
+  data: any[];
+  columns: DataTableColumn[];
+  actions?: DataTableAction[];
   height?: string;
   stickyActions?: boolean;
   configurableColumns?: boolean;
   storageKey?: string;
   showColumnConfig?: boolean;
-  configureColumnsComponent?: React.ReactNode;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
 }
 
-export function DataTable<T extends Record<string, any>>({
+export function DataTable({
   data,
   columns,
   actions = [],
-  onRowClick,
-  className = "",
-  height = "70vh",
-  stickyActions = true,
-  configurableColumns = true,
-  storageKey,
-  showColumnConfig = true,
-  configureColumnsComponent,
+  height = 'auto',
+  stickyActions = false,
   searchValue,
   onSearchChange,
-  searchPlaceholder = "Search..."
-}: DataTableProps<T>) {
-  // Column visibility state - all columns visible by default
-  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(() => {
-    const defaultVisibility = columns.reduce((acc, col) => {
-      acc[col.key] = true;
-      return acc;
-    }, {} as Record<string, boolean>);
-    return defaultVisibility;
-  });
+  searchPlaceholder = 'Search...'
+}: DataTableProps) {
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  // Load column preferences from localStorage
-  React.useEffect(() => {
-    if (storageKey) {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        setVisibleColumns(JSON.parse(saved));
-      }
+  const sortedData = useMemo(() => {
+    if (!sortColumn) return data;
+    
+    return [...data].sort((a, b) => {
+      const aValue = a[sortColumn];
+      const bValue = b[sortColumn];
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [data, sortColumn, sortDirection]);
+
+  const handleSort = (columnKey: string) => {
+    if (sortColumn === columnKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(columnKey);
+      setSortDirection('asc');
     }
-  }, [storageKey]);
-
-  // Save column preferences to localStorage
-  React.useEffect(() => {
-    if (storageKey) {
-      localStorage.setItem(storageKey, JSON.stringify(visibleColumns));
-    }
-  }, [visibleColumns, storageKey]);
-
-  const handleColumnToggle = (column: string, checked: boolean) => {
-    setVisibleColumns(prev => ({
-      ...prev,
-      [column]: checked
-    }));
   };
 
-  const visibleColumnsArray = columns.filter(col => visibleColumns[col.key]);
-
-  const ColumnConfigComponent = configureColumnsComponent || (
-    configurableColumns && showColumnConfig && (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64" align="end">
-          <div className="space-y-4">
-            <h4 className="font-medium text-sm">Toggle columns</h4>
-            <div className="space-y-2">
-              {columns.map((column) => (
-                <div key={column.key} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={column.key}
-                    checked={visibleColumns[column.key]}
-                    onCheckedChange={(checked) => handleColumnToggle(column.key, checked as boolean)}
-                  />
-                  <label htmlFor={column.key} className="text-sm font-normal">
-                    {column.label}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    )
-  );
-
   return (
-    <div className={`w-full ${className}`}>
-      {/* Search bar */}
+    <div className="space-y-4">
+      {/* Search */}
       {onSearchChange && (
-        <div className="mb-4 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <div className="flex items-center space-x-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
-            value={searchValue || ""}
+            value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
+            className="max-w-sm"
           />
         </div>
       )}
-      
-      <div className="border rounded-md overflow-hidden">
-        <div className={`overflow-auto relative`} style={{ height }}>
+
+      {/* Table */}
+      <div className="rounded-md border">
+        <ScrollArea style={{ height }} className="w-full">
           <Table>
             <TableHeader>
               <TableRow>
-                {visibleColumnsArray.map((column) => (
-                  <TableHead
+                {columns.map((column) => (
+                  <TableHead 
                     key={column.key}
-                    className={`whitespace-nowrap ${column.minWidth ? `min-w-[${column.minWidth}]` : ''} ${column.className || ''}`}
+                    style={{ minWidth: column.minWidth }}
+                    className={column.sortable ? 'cursor-pointer hover:bg-muted/50' : ''}
+                    onClick={() => column.sortable && handleSort(column.key)}
                   >
-                    {column.label}
+                    <div className="flex items-center space-x-1">
+                      <span>{column.label}</span>
+                      {column.sortable && sortColumn === column.key && (
+                        <span className="text-xs">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </TableHead>
                 ))}
                 {actions.length > 0 && (
-                  <TableHead className={`text-right min-w-[120px] whitespace-nowrap ${stickyActions ? 'sticky right-0 bg-background border-l' : ''}`}>
+                  <TableHead className={stickyActions ? 'sticky right-0 bg-background' : ''}>
                     Actions
                   </TableHead>
                 )}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((item, index) => (
-                <TableRow 
-                  key={item.id || index}
-                  className={`transition-all duration-200 ${onRowClick ? 'cursor-pointer hover:bg-muted/70' : ''}`}
-                  onClick={() => onRowClick?.(item)}
-                >
-                  {visibleColumnsArray.map((column) => (
-                    <TableCell
+              {sortedData.map((item, index) => (
+                <TableRow key={item.id || index}>
+                  {columns.map((column) => (
+                    <TableCell 
                       key={column.key}
-                      className={`${column.minWidth ? `min-w-[${column.minWidth}]` : ''} ${column.className || ''}`}
+                      style={{ minWidth: column.minWidth }}
                     >
-                      {column.render ? column.render(item) : (item[column.key] || '-')}
+                      {column.render ? column.render(item) : item[column.key]}
                     </TableCell>
                   ))}
                   {actions.length > 0 && (
-                    <TableCell className={`text-right min-w-[120px] ${stickyActions ? 'sticky right-0 bg-background border-l' : ''}`}>
-                      <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className={stickyActions ? 'sticky right-0 bg-background' : ''}>
+                      <div className="flex items-center space-x-1">
                         {actions.map((action, actionIndex) => (
                           <Button
                             key={actionIndex}
+                            variant={action.variant || 'outline'}
                             size="sm"
-                            variant={action.variant || "outline"}
                             onClick={() => action.onClick(item)}
+                            className={action.className}
                           >
                             {action.icon}
+                            <span className="sr-only">{action.label}</span>
                           </Button>
                         ))}
                       </div>
@@ -191,15 +148,16 @@ export function DataTable<T extends Record<string, any>>({
               ))}
             </TableBody>
           </Table>
-        </div>
+        </ScrollArea>
       </div>
-      
-      {/* Render column config component if provided or show default */}
-      {ColumnConfigComponent && (
-        <div className="mt-4 flex justify-end">
-          {ColumnConfigComponent}
+
+      {sortedData.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          No data available
         </div>
       )}
     </div>
   );
 }
+
+export default DataTable;
