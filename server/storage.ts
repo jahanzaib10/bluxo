@@ -198,6 +198,11 @@ export class DatabaseStorage implements IStorage {
     return newCategory;
   }
 
+  async getCategory(id: string): Promise<Category | undefined> {
+    const [category] = await db.select().from(categories).where(eq(categories.id, id));
+    return category;
+  }
+
   async updateCategory(id: string, category: Partial<InsertCategory>): Promise<Category | undefined> {
     const [updatedCategory] = await db
       .update(categories)
@@ -208,6 +213,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCategory(id: string): Promise<boolean> {
+    // First, get all child categories that have this category as parent
+    const childCategories = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.parentId, id));
+
+    // Delete all child categories first (cascading delete)
+    for (const child of childCategories) {
+      await this.deleteCategory(child.id); // Recursive delete for nested children
+    }
+
+    // Finally, delete the parent category
     const result = await db.delete(categories).where(eq(categories.id, id));
     return result.rowCount! > 0;
   }

@@ -150,10 +150,10 @@ export default function CategoriesSettings() {
     mutationFn: async (id: string) => {
       return await apiRequest(`/api/categories/${id}`, 'DELETE');
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast({
         title: "Success",
-        description: "Category deleted successfully",
+        description: data.message || "Category deleted successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
     },

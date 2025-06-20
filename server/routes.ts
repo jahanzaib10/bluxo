@@ -840,6 +840,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete category with cascading delete for child categories
+  app.delete("/api/categories/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = req.user.organizationId;
+      
+      // Verify the category belongs to the user's organization
+      const category = await storage.getCategory(id);
+      if (!category || category.organizationId !== organizationId) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      const success = await storage.deleteCategory(id);
+      
+      if (success) {
+        res.json({ message: "Category and all child categories deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Category not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      res.status(500).json({ message: "Failed to delete category" });
+    }
+  });
+
   // Income endpoints
   app.get("/api/income", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
