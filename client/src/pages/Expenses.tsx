@@ -234,7 +234,7 @@ export default function Expenses() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedExpenses(new Set(filteredExpenses.map((expense: ExpenseRecord) => expense.id)));
+      setSelectedExpenses(new Set((filteredExpenses as ExpenseRecord[]).map((expense: ExpenseRecord) => expense.id)));
     } else {
       setSelectedExpenses(new Set());
     }
