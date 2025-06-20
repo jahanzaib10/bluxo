@@ -1,14 +1,10 @@
-
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { HierarchicalSelect } from '@/components/ui/hierarchical-select';
 import { TimeRangePicker } from './TimeRangePicker';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useHierarchicalCategories } from '@/hooks/useHierarchicalCategories';
 import { X, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -41,32 +37,16 @@ export function OverviewFilters({
   onClearFilters
 }: OverviewFiltersProps) {
   const { data: clients = [] } = useQuery({
-    queryKey: ['clients'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('archived', false)
-        .order('name');
-      if (error) throw error;
-      return data;
-    },
+    queryKey: ['/api/clients'],
   });
 
   const { data: employees = [] } = useQuery({
-    queryKey: ['employees'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('archived', false)
-        .order('worker_full_name');
-      if (error) throw error;
-      return data;
-    },
+    queryKey: ['/api/employees'],
   });
 
-  const { data: categories } = useHierarchicalCategories();
+  const { data: categories = [] } = useQuery({
+    queryKey: ['/api/categories'],
+  });
 
   const hasActiveFilters = selectedClient || selectedEmployee || selectedCategory;
 
@@ -126,7 +106,7 @@ export function OverviewFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all-clients">All Clients</SelectItem>
-            {clients.map((client) => (
+            {Array.isArray(clients) && clients.map((client: any) => (
               <SelectItem key={client.id} value={client.id}>
                 {client.name}
               </SelectItem>
@@ -141,35 +121,33 @@ export function OverviewFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all-employees">All Employees</SelectItem>
-            {employees.map((employee) => (
+            {Array.isArray(employees) && employees.map((employee: any) => (
               <SelectItem key={employee.id} value={employee.id}>
-                {employee.worker_full_name}
+                {employee.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
         {/* Category Filter */}
-        <div className="w-[140px]">
-          <HierarchicalSelect
-            categories={categories || []}
-            value={selectedCategory || "all-categories"}
-            onValueChange={(value) => onCategoryChange(value === "all-categories" ? undefined : value)}
-            placeholder="All Categories"
-            showOnlyChildren={false}
-          />
-        </div>
+        <Select value={selectedCategory || "all-categories"} onValueChange={(value) => onCategoryChange(value === "all-categories" ? undefined : value)}>
+          <SelectTrigger className="h-9 w-[140px]">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all-categories">All Categories</SelectItem>
+            {Array.isArray(categories) && categories.map((category: any) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Clear Filters */}
         {hasActiveFilters && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClearFilters}
-            className="h-9"
-          >
-            <X className="h-4 w-4 mr-1" />
-            Clear
+          <Button variant="ghost" size="sm" onClick={onClearFilters} className="h-9 px-2">
+            <X className="h-4 w-4" />
           </Button>
         )}
       </div>
