@@ -61,17 +61,21 @@ export default function UserManagement() {
     refetchOnWindowFocus: true,
   });
 
+  // Use all actual users from API, no hardcoded data
+  const allUsers = users;
+
   // Add console logging to debug the data received
   useEffect(() => {
     console.log("[DEBUG] Users data received:", users);
     console.log("[DEBUG] Users count:", users.length);
     console.log("[DEBUG] Current user:", currentUser);
+    console.log("[DEBUG] Final allUsers array:", allUsers);
     if (users && users.length > 0) {
       users.forEach((user, index) => {
-        console.log(`[DEBUG] User ${index}:`, { id: user.id, email: user.email, name: user.name });
+        console.log(`[DEBUG] User ${index}:`, { id: user.id, email: user.email, name: user.name, role: user.role });
       });
     }
-  }, [users, currentUser]);
+  }, [users, currentUser, allUsers]);
 
   // Fetch invitations
   const { data: invitations = [], isLoading: invitationsLoading } = useQuery<UserInvitation[]>({
@@ -272,10 +276,7 @@ export default function UserManagement() {
     }
   };
 
-  // Use only actual users from API, no hardcoded data
-  const allUsers = users.filter(user => user.role !== "client");
-
-  // Stats calculations (include owner in totals)
+  // Stats calculations
   const activeUsers = allUsers.filter(user => user.status === "active").length;
   const pendingInvitations = invitations.filter(inv => inv.status === "pending").length;
   const totalUsers = allUsers.length;
@@ -499,7 +500,7 @@ export default function UserManagement() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm">{user.department || "—"}</span>
+                          <span className="text-sm">—</span>
                         </TableCell>
                         <TableCell>
                           <Badge variant={getStatusBadgeVariant(user.status || "active")}>
