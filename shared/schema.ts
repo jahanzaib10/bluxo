@@ -8,6 +8,7 @@ import {
   date,
   jsonb,
   index,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -76,13 +77,23 @@ export const categories = pgTable("categories", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const paymentSources = pgTable("payment_sources", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type"), // "bank", "cash", "card", etc.
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const income = pgTable("income", {
   id: uuid("id").primaryKey().defaultRandom(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-  description: text("description"),
   date: date("date").notNull(),
   clientId: uuid("client_id").references(() => clients.id),
+  paymentSourceId: uuid("payment_source_id").references(() => paymentSources.id),
   categoryId: uuid("category_id").references(() => categories.id),
+  description: text("description"),
+  isRecurring: boolean("is_recurring").default(false),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -114,6 +125,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   clients: many(clients),
   employees: many(employees),
   categories: many(categories),
+  paymentSources: many(paymentSources),
   income: many(income),
   expenses: many(expenses),
   subscriptions: many(subscriptions),
@@ -151,6 +163,14 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
   expenses: many(expenses),
 }));
 
+export const paymentSourcesRelations = relations(paymentSources, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [paymentSources.organizationId],
+    references: [organizations.id],
+  }),
+  income: many(income),
+}));
+
 export const incomeRelations = relations(income, ({ one }) => ({
   organization: one(organizations, {
     fields: [income.organizationId],
@@ -159,6 +179,10 @@ export const incomeRelations = relations(income, ({ one }) => ({
   client: one(clients, {
     fields: [income.clientId],
     references: [clients.id],
+  }),
+  paymentSource: one(paymentSources, {
+    fields: [income.paymentSourceId],
+    references: [paymentSources.id],
   }),
   category: one(categories, {
     fields: [income.categoryId],
@@ -205,20 +229,27 @@ export const insertCategorySchema = z.object({
   type: z.enum(["income", "expense"]),
 });
 
+export const insertPaymentSourceSchema = z.object({
+  name: z.string().min(1),
+  type: z.string().optional(),
+});
+
 export const insertIncomeSchema = z.object({
   amount: z.string(),
-  description: z.string().optional(),
   date: z.string(),
   clientId: z.string().uuid().optional(),
+  paymentSourceId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),
+  description: z.string().optional(),
+  isRecurring: z.boolean().optional(),
 });
 
 export const insertExpenseSchema = z.object({
   amount: z.string(),
-  description: z.string().optional(),
   date: z.string(),
   employeeId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),
+  description: z.string().optional(),
 });
 
 export const insertSubscriptionSchema = z.object({
@@ -239,6 +270,7 @@ export type User = typeof users.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type Category = typeof categories.$inferSelect;
+export type PaymentSource = typeof paymentSources.$inferSelect;
 export type Income = typeof income.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
@@ -247,6 +279,7 @@ export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type InsertPaymentSource = z.infer<typeof insertPaymentSourceSchema>;
 export type InsertIncome = z.infer<typeof insertIncomeSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
