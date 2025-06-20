@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, Search, Edit, Trash2, CreditCard, AlertTriangle, CheckCircle, X } from "lucide-react";
+import { Plus, Upload, Search, Edit, Trash2, CreditCard, AlertTriangle, CheckCircle, X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +73,8 @@ export default function Expenses() {
   const [csvData, setCsvData] = useState("");
   const [parsedData, setParsedData] = useState<CsvRow[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<FormData>({
     amount: "",
@@ -369,12 +371,57 @@ export default function Expenses() {
     importMutation.mutate(parsedData);
   };
 
+  // File Upload Functions
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a CSV file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploadedFile(file);
+    
+    try {
+      const text = await file.text();
+      setCsvData(text);
+      
+      // Automatically parse and validate the uploaded file
+      const parsed = parseCsvData(text);
+      const errors = validateCsvData(parsed);
+      
+      setParsedData(parsed);
+      setValidationErrors(errors);
+      setShowPreview(true);
+      
+      toast({
+        title: "File uploaded successfully",
+        description: `Loaded ${parsed.length} rows from ${file.name}`
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to read file",
+        description: "Please check the file format and try again",
+        variant: "destructive"
+      });
+    }
+  };
+
   const resetImportState = () => {
     setCsvData("");
     setParsedData([]);
     setValidationErrors([]);
+    setUploadedFile(null);
     setShowPreview(false);
     setIsImportOpen(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const filteredExpenses = expenses.filter((record: ExpenseRecord) =>
@@ -534,7 +581,7 @@ export default function Expenses() {
               </DialogHeader>
               
               {!showPreview ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h4 className="font-medium text-blue-900 mb-2">CSV Format Requirements</h4>
                     <p className="text-sm text-blue-700 mb-2">Required columns:</p>
@@ -553,17 +600,103 @@ export default function Expenses() {
                       <li>• <strong>recurring_end_date</strong> - End date for recurring expenses (YYYY-MM-DD)</li>
                     </ul>
                   </div>
-                  
-                  <div>
-                    <Label htmlFor="csvData">CSV Data</Label>
-                    <Textarea
-                      id="csvData"
-                      placeholder="date,amount,description,employee_email,category_name,is_recurring,recurring_frequency,recurring_end_date&#10;2024-01-15,150.00,Office supplies,john@company.com,Office Expenses,false,,&#10;2024-01-20,75.50,Monthly software subscription,jane@company.com,Software,true,monthly,2024-12-31"
-                      value={csvData}
-                      onChange={(e) => setCsvData(e.target.value)}
-                      rows={12}
-                      className="font-mono text-sm"
-                    />
+
+                  {/* File Upload Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <Label className="text-sm font-medium">Upload CSV File</Label>
+                        <div 
+                          className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors cursor-pointer"
+                          onClick={() => fileInputRef.current?.click()}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.add('border-purple-400', 'bg-purple-50');
+                          }}
+                          onDragLeave={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove('border-purple-400', 'bg-purple-50');
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove('border-purple-400', 'bg-purple-50');
+                            const files = e.dataTransfer.files;
+                            if (files.length > 0) {
+                              const file = files[0];
+                              if (fileInputRef.current) {
+                                const dt = new DataTransfer();
+                                dt.items.add(file);
+                                fileInputRef.current.files = dt.files;
+                                handleFileUpload({ target: { files: dt.files } } as any);
+                              }
+                            }
+                          }}
+                        >
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".csv"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                          />
+                          {uploadedFile ? (
+                            <div className="space-y-2">
+                              <FileText className="h-8 w-8 text-green-600 mx-auto" />
+                              <p className="text-sm font-medium text-green-700">
+                                {uploadedFile.name}
+                              </p>
+                              <p className="text-xs text-green-600">
+                                {(uploadedFile.size / 1024).toFixed(1)} KB
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setUploadedFile(null);
+                                  setCsvData("");
+                                  if (fileInputRef.current) {
+                                    fileInputRef.current.value = '';
+                                  }
+                                }}
+                              >
+                                Remove File
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium text-purple-600">Click to upload</span> or drag and drop
+                              </p>
+                              <p className="text-xs text-gray-500">CSV files only</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <div className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded">OR</div>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <Label htmlFor="csvData">Paste CSV Data</Label>
+                        <Textarea
+                          id="csvData"
+                          placeholder="date,amount,description,employee_email,category_name,is_recurring,recurring_frequency,recurring_end_date&#10;2024-01-15,150.00,Office supplies,john@company.com,Office Expenses,false,,&#10;2024-01-20,75.50,Monthly software subscription,jane@company.com,Software,true,monthly,2024-12-31"
+                          value={csvData}
+                          onChange={(e) => {
+                            setCsvData(e.target.value);
+                            setUploadedFile(null);
+                            if (fileInputRef.current) {
+                              fileInputRef.current.value = '';
+                            }
+                          }}
+                          rows={8}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="flex justify-end space-x-2">
@@ -585,6 +718,14 @@ export default function Expenses() {
                   {/* Validation Summary */}
                   <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-center space-x-4">
+                      {uploadedFile && (
+                        <div className="flex items-center space-x-2">
+                          <FileText className="h-5 w-5 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-700">
+                            {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center space-x-2">
                         <CheckCircle className="h-5 w-5 text-green-600" />
                         <span className="text-sm font-medium">{parsedData.length} rows parsed</span>
@@ -604,7 +745,7 @@ export default function Expenses() {
                       onClick={() => setShowPreview(false)}
                     >
                       <X className="h-4 w-4 mr-2" />
-                      Edit CSV
+                      Edit {uploadedFile ? 'File' : 'CSV'}
                     </Button>
                   </div>
 
