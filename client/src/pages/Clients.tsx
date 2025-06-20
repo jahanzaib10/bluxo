@@ -287,9 +287,39 @@ export default function Clients() {
         return;
       }
 
-      const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
+      // Parse CSV more carefully to handle commas within quoted values
+      const parseCSVLine = (line: string): string[] => {
+        const values: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+        return values;
+      };
+
+      const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, ''));
+      const headerCount = headers.length;
+      
       const data = lines.slice(1).map(line => {
-        const values = line.split(",").map(v => v.trim().replace(/"/g, ""));
+        const values = parseCSVLine(line).map(v => v.replace(/^"|"$/g, ''));
+        
+        // Ensure we have exactly the same number of values as headers
+        while (values.length < headerCount) {
+          values.push('');
+        }
+        
         const row: any = {};
         headers.forEach((header, index) => {
           const normalizedHeader = header.toLowerCase().replace(/\s+/g, "");
@@ -299,6 +329,7 @@ export default function Clients() {
           if (normalizedHeader === "contactname" || normalizedHeader === "contact_name") fieldName = "contactName";
           if (normalizedHeader === "contactemail" || normalizedHeader === "contact_email") fieldName = "contactEmail";
           
+          // Always assign the value, even if it's empty string
           row[fieldName] = values[index] || "";
         });
         return row;
@@ -398,13 +429,13 @@ export default function Clients() {
                         <tbody>
                           {csvData.slice(0, 10).map((row, index) => (
                             <tr key={index} className="border-t">
-                              <td className="p-2">{row.name || "-"}</td>
-                              <td className="p-2">{row.email || "-"}</td>
-                              <td className="p-2">{row.phone || "-"}</td>
-                              <td className="p-2">{row.website || "-"}</td>
-                              <td className="p-2">{row.industry || "-"}</td>
-                              <td className="p-2">{row.contactName || "-"}</td>
-                              <td className="p-2">{row.contactEmail || "-"}</td>
+                              <td className="p-2">{row.name || ""}</td>
+                              <td className="p-2">{row.email || ""}</td>
+                              <td className="p-2">{row.phone || ""}</td>
+                              <td className="p-2">{row.website || ""}</td>
+                              <td className="p-2">{row.industry || ""}</td>
+                              <td className="p-2">{row.contactName || row.contactname || ""}</td>
+                              <td className="p-2">{row.contactEmail || row.contactemail || ""}</td>
                             </tr>
                           ))}
                         </tbody>
