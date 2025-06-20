@@ -232,6 +232,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       }
       
+      // Handle DD/MM/YYYY format (common international format)
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+        const parts = trimmed.split('/');
+        // If day > 12, assume DD/MM/YYYY format
+        if (parseInt(parts[0]) > 12) {
+          const [day, month, year] = parts;
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+        // Otherwise treat as MM/DD/YYYY
+        const [month, day, year] = parts;
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      
       // Handle MM-DD-YYYY format
       if (formats[2].test(trimmed)) {
         const [month, day, year] = trimmed.split('-');
