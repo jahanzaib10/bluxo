@@ -605,7 +605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Categories CSV import endpoint
+  // Categories CSV import endpoint with hierarchical support
   app.post("/api/categories/import", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
@@ -621,16 +621,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const errors = [];
       const duplicateNames = new Set();
       
-      // Get existing categories to check for duplicates
+      // Get existing categories to check for duplicates and resolve parent relationships
       const existingCategories = await db
-        .select({ name: categories.name, type: categories.type })
+        .select()
         .from(categories)
         .where(eq(categories.organizationId, organizationId));
       
       const existingCategoryMap = new Map();
+      const existingCategoryNameMap = new Map();
       existingCategories.forEach(cat => {
         existingCategoryMap.set(`${cat.name.toLowerCase()}_${cat.type}`, true);
+        existingCategoryNameMap.set(cat.name.toLowerCase(), cat);
       });
+      
+      // First pass: collect all category names from import to build name-to-id mapping
+      const importCategoryNameMap = new Map();
+      for (let i = 0; i < categoryData.length; i++) {
+        const row = categoryData[i];
+        if (row && row.name && row.type) {
+          importCategoryNameMap.set(row.name.toLowerCase(), row);
+        }
+      }
       
       for (let i = 0; i < categoryData.length; i++) {
         const row = categoryData[i];
@@ -642,6 +653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const name = row.name?.toString().trim();
         const type = row.type?.toString().toLowerCase().trim();
+        const parentName = row.parent_name?.toString().trim();
         
         // Validate required fields
         if (!name) {
@@ -667,22 +679,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
         
+        // Resolve parent_id if parent_name is provided
+        let parentId = null;
+        if (parentName) {
+          // First check existing categories
+          const existingParent = existingCategoryNameMap.get(parentName.toLowerCase());
+          if (existingParent) {
+            parentId = existingParent.id;
+          } else {
+            // Check in current import batch
+            const importParent = importCategoryNameMap.get(parentName.toLowerCase());
+            if (!importParent) {
+              errors.push(`Row ${i + 1}: Parent category '${parentName}' not found`);
+              continue;
+            }
+            // Note: We'll need to handle this in a second pass after inserting parent categories
+          }
+        }
+        
         duplicateNames.add(categoryKey);
         
         processedCategories.push({
           name,
           type: type as 'income' | 'expense',
+          parentId,
+          parentName, // Keep for second pass resolution
           organizationId,
         });
       }
       
-      // Insert valid categories
+      // Insert valid categories in two passes to handle parent-child relationships
       let insertedCategories = [];
       if (processedCategories.length > 0) {
-        insertedCategories = await db
-          .insert(categories)
-          .values(processedCategories)
-          .returning();
+        // First pass: Insert categories without parent relationships
+        const topLevelCategories = processedCategories
+          .filter(cat => !cat.parentName)
+          .map(cat => ({
+            name: cat.name,
+            type: cat.type,
+            parentId: cat.parentId,
+            organizationId: cat.organizationId,
+          }));
+        
+        let insertedTopLevel = [];
+        if (topLevelCategories.length > 0) {
+          insertedTopLevel = await db
+            .insert(categories)
+            .values(topLevelCategories)
+            .returning();
+        }
+        
+        // Second pass: Insert child categories with resolved parent IDs
+        const childCategories = processedCategories.filter(cat => cat.parentName);
+        const newCategoryNameMap = new Map();
+        
+        // Build map of newly inserted categories
+        insertedTopLevel.forEach(cat => {
+          newCategoryNameMap.set(cat.name.toLowerCase(), cat);
+        });
+        
+        const childCategoryData = [];
+        for (const childCat of childCategories) {
+          let parentId = childCat.parentId;
+          
+          // If parent not resolved yet, try to find in newly inserted categories
+          if (!parentId && childCat.parentName) {
+            const parent = newCategoryNameMap.get(childCat.parentName.toLowerCase()) ||
+                          existingCategoryNameMap.get(childCat.parentName.toLowerCase());
+            
+            if (parent) {
+              parentId = parent.id;
+            } else {
+              errors.push(`Category '${childCat.name}': Parent '${childCat.parentName}' not found`);
+              continue;
+            }
+          }
+          
+          childCategoryData.push({
+            name: childCat.name,
+            type: childCat.type,
+            parentId,
+            organizationId: childCat.organizationId,
+          });
+        }
+        
+        let insertedChildren = [];
+        if (childCategoryData.length > 0) {
+          insertedChildren = await db
+            .insert(categories)
+            .values(childCategoryData)
+            .returning();
+        }
+        
+        insertedCategories = [...insertedTopLevel, ...insertedChildren];
       }
       
       res.status(200).json({

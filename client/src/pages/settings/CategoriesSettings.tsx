@@ -21,12 +21,14 @@ const categorySchema = z.object({
   type: z.enum(['income', 'expense'], {
     required_error: 'Please select a category type',
   }),
+  parentId: z.string().optional(),
 });
 
 type Category = {
   id: string;
   name: string;
   type: 'income' | 'expense';
+  parentId: string | null;
   organizationId: string;
   createdAt: string;
   updatedAt: string;
@@ -35,6 +37,7 @@ type Category = {
 type ImportCategory = {
   name: string;
   type: 'income' | 'expense';
+  parent_name?: string;
 };
 
 export default function CategoriesSettings() {
