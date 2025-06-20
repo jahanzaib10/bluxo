@@ -418,6 +418,10 @@ export const updateUserStatusSchema = z.object({
   status: z.enum(["active", "suspended", "inactive"]),
 });
 
+export const insertOrganizationSchema = createInsertSchema(organizations).pick({
+  name: true,
+});
+
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type User = typeof users.$inferSelect;
@@ -433,6 +437,7 @@ export type Expense = typeof expenses.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 
 // Insert types for forms
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUserInvitation = z.infer<typeof insertUserInvitationSchema>;
 export type UpdateUserRole = z.infer<typeof updateUserRoleSchema>;

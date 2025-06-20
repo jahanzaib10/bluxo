@@ -1,4 +1,5 @@
 import { 
+  organizations,
   categories, 
   clients, 
   clientPermissions,
@@ -10,6 +11,8 @@ import {
   subscriptions,
   users,
   userInvitations,
+  type Organization,
+  type InsertOrganization,
   type Category, 
   type InsertCategory,
   type Client, 
@@ -38,12 +41,17 @@ import { db } from "./db";
 import { eq, desc, isNull } from "drizzle-orm";
 
 export interface IStorage {
+  // Organization methods
+  createOrganization(organization: InsertOrganization): Promise<Organization>;
+  getOrganization(id: string): Promise<Organization | undefined>;
+
   // User methods (legacy)
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: UpsertUser): Promise<User>;
   updateUserLastLogin(id: string): Promise<void>;
+  updateUserOrganization(id: string, organizationId: string): Promise<User | undefined>;
 
   // User management methods
   getUsers(organizationId: string): Promise<User[]>;
