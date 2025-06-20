@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Mail, Phone, Globe, Building, User, Settings, Eye, Calendar, DollarSign } from "lucide-react";
+import { Plus, Mail, Phone, Globe, Building, User, Settings, Eye, Calendar, DollarSign, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -379,6 +379,15 @@ export default function Clients() {
                     <User className="mr-2 h-4 w-4" />
                     {generateAuthTokenMutation.isPending ? "Generating..." : "Generate Access"}
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openDeleteModal(client)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -697,6 +706,53 @@ export default function Clients() {
                   </p>
                 </CardContent>
               </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Client Delete Confirmation Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Delete Client
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the client and all related data.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedClient && (
+            <div className="space-y-4">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <h3 className="font-medium text-red-800">You are about to delete:</h3>
+                <p className="text-red-700 mt-1">
+                  <strong>{selectedClient.name}</strong>
+                  {selectedClient.email && ` (${selectedClient.email})`}
+                </p>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <p>This will also remove:</p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>All client permissions and access tokens</li>
+                  <li>All income records linked to this client</li>
+                  <li>All financial data associated with this client</li>
+                </ul>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  onClick={handleDeleteClient}
+                  disabled={deleteClientMutation.isPending}
+                >
+                  {deleteClientMutation.isPending ? "Deleting..." : "Delete Client"}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
