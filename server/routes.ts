@@ -1149,6 +1149,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client authentication and dashboard routes
+  app.post("/api/client-auth/request", async (req, res) => {
+    try {
+      const { email } = clientAuthRequestSchema.parse(req.body);
+      
+      const client = await storage.getClientByEmail(email);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const authToken = await storage.createClientAuthToken(client.id, email);
+      
+      // In a real application, you would send this token via email
+      // For demo purposes, we return it in the response
+      res.json({ 
+        message: "Authentication token created", 
+        token: authToken.token,
+        expiresAt: authToken.expiresAt 
+      });
+    } catch (error) {
+      console.error("Error creating client auth token:", error);
+      res.status(500).json({ message: "Failed to create authentication token" });
+    }
+  });
+
+  app.post("/api/client-auth/verify", async (req, res) => {
+    try {
+      const { token } = req.body;
+      
+      const client = await storage.getClientByToken(token);
+      if (!client) {
+        return res.status(401).json({ message: "Invalid or expired token" });
+      }
+
+      await storage.markTokenAsUsed(token);
+      
+      res.json({ 
+        client: {
+          id: client.id,
+          name: client.name,
+          email: client.email,
+          phone: client.phone,
+          website: client.website,
+          industry: client.industry
+        }
+      });
+    } catch (error) {
+      console.error("Error verifying client token:", error);
+      res.status(500).json({ message: "Failed to verify token" });
+    }
+  });
+
+  app.get("/api/client-dashboard/:clientId", async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const permissions = await storage.getClientPermissions(clientId);
+      const incomeRecords = await storage.getIncome();
+      const categories = await storage.getCategories();
+
+      // Filter income records for this client
+      const clientIncome = incomeRecords.filter(income => income.clientId === clientId);
+      
+      // Calculate totals and statistics
+      const totalIncome = clientIncome.reduce((sum, income) => sum + parseFloat(income.amount), 0);
+      const monthlyIncome = clientIncome
+        .filter(income => {
+          const incomeDate = new Date(income.date);
+          const now = new Date();
+          return incomeDate.getMonth() === now.getMonth() && incomeDate.getFullYear() === now.getFullYear();
+        })
+        .reduce((sum, income) => sum + parseFloat(income.amount), 0);
+
+      // Category breakdown
+      const categoryBreakdown = categories.map(category => {
+        const categoryIncome = clientIncome
+          .filter(income => income.categoryId === category.id)
+          .reduce((sum, income) => sum + parseFloat(income.amount), 0);
+        return {
+          name: category.name,
+          amount: categoryIncome,
+          percentage: totalIncome > 0 ? (categoryIncome / totalIncome) * 100 : 0
+        };
+      }).filter(cat => cat.amount > 0);
+
+      res.json({
+        client: {
+          id: client.id,
+          name: client.name,
+          email: client.email,
+          industry: client.industry
+        },
+        permissions: permissions || {
+          showIncomeGraph: true,
+          showCategoryBreakdown: true,
+          showPaymentHistory: true,
+          showInvoices: false
+        },
+        dashboard: {
+          totalIncome,
+          monthlyIncome,
+          totalTransactions: clientIncome.length,
+          categoryBreakdown,
+          recentTransactions: clientIncome
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 10)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching client dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch client dashboard" });
+    }
+  });
+
+  app.put("/api/client-permissions/:clientId", mockAuth, async (req: any, res) => {
+    try {
+      const { clientId } = req.params;
+      const permissionsData = insertClientPermissionsSchema.parse(req.body);
+      
+      const permissions = await storage.upsertClientPermissions({
+        ...permissionsData,
+        clientId,
+        organizationId: req.user.organizationId
+      });
+      
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error updating client permissions:", error);
+      res.status(500).json({ message: "Failed to update client permissions" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

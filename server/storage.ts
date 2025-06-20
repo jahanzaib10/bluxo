@@ -45,9 +45,19 @@ export interface IStorage {
   // Client methods
   getClients(): Promise<Client[]>;
   getClient(id: string): Promise<Client | undefined>;
+  getClientByEmail(email: string): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, client: Partial<InsertClient>): Promise<Client | undefined>;
   deleteClient(id: string): Promise<boolean>;
+
+  // Client permissions methods
+  getClientPermissions(clientId: string): Promise<ClientPermissions | undefined>;
+  upsertClientPermissions(permissions: InsertClientPermissions): Promise<ClientPermissions>;
+
+  // Client auth token methods
+  createClientAuthToken(clientId: string, email: string): Promise<ClientAuthToken>;
+  getClientByToken(token: string): Promise<Client | undefined>;
+  markTokenAsUsed(token: string): Promise<boolean>;
 
   // Employee methods
   getEmployees(): Promise<Employee[]>;
@@ -157,6 +167,75 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClient(id: string): Promise<boolean> {
     const result = await db.delete(clients).where(eq(clients.id, id));
+    return result.rowCount! > 0;
+  }
+
+  async getClientByEmail(email: string): Promise<Client | undefined> {
+    const [client] = await db.select().from(clients).where(eq(clients.email, email));
+    return client;
+  }
+
+  async getClientPermissions(clientId: string): Promise<ClientPermissions | undefined> {
+    const [permissions] = await db.select().from(clientPermissions).where(eq(clientPermissions.clientId, clientId));
+    return permissions;
+  }
+
+  async upsertClientPermissions(permissions: InsertClientPermissions): Promise<ClientPermissions> {
+    const [result] = await db
+      .insert(clientPermissions)
+      .values(permissions)
+      .onConflictDoUpdate({
+        target: clientPermissions.clientId,
+        set: {
+          showIncomeGraph: permissions.showIncomeGraph,
+          showCategoryBreakdown: permissions.showCategoryBreakdown,
+          showPaymentHistory: permissions.showPaymentHistory,
+          showInvoices: permissions.showInvoices,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async createClientAuthToken(clientId: string, email: string): Promise<ClientAuthToken> {
+    const token = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    const [authToken] = await db
+      .insert(clientAuthTokens)
+      .values({
+        token,
+        clientId,
+        email,
+        expiresAt,
+      })
+      .returning();
+    return authToken;
+  }
+
+  async getClientByToken(token: string): Promise<Client | undefined> {
+    const [authToken] = await db
+      .select({
+        client: clients,
+        token: clientAuthTokens,
+      })
+      .from(clientAuthTokens)
+      .innerJoin(clients, eq(clientAuthTokens.clientId, clients.id))
+      .where(eq(clientAuthTokens.token, token));
+
+    if (!authToken || authToken.token.used || authToken.token.expiresAt < new Date()) {
+      return undefined;
+    }
+
+    return authToken.client;
+  }
+
+  async markTokenAsUsed(token: string): Promise<boolean> {
+    const result = await db
+      .update(clientAuthTokens)
+      .set({ used: true })
+      .where(eq(clientAuthTokens.token, token));
     return result.rowCount! > 0;
   }
 
