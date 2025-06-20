@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,7 +19,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function Login() {
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -41,7 +41,7 @@ export default function Login() {
         title: "Login successful",
         description: "Welcome back!",
       });
-      navigate("/");
+      setLocation("/");
     },
     onError: (error: any) => {
       toast({
@@ -111,7 +111,7 @@ export default function Login() {
           </Form>
           <div className="mt-4 text-center text-sm">
             Don't have an account?{" "}
-            <Button variant="link" className="p-0" onClick={() => navigate("/signup")}>
+            <Button variant="link" className="p-0" onClick={() => setLocation("/signup")}>
               Sign up
             </Button>
           </div>

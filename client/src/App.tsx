@@ -26,37 +26,63 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 
+function AuthenticatedApp() {
+  return (
+    <DashboardLayout>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/dashboard" component={Dashboard} />
+        <Route path="/income" component={Income} />
+        <Route path="/expenses" component={Expenses} />
+        <Route path="/subscriptions" component={Subscriptions} />
+        <Route path="/employees" component={Employees} />
+        <Route path="/clients" component={Clients} />
+        <Route path="/settings/categories" component={Categories} />
+        <Route path="/settings/payment-sources" component={PaymentSources} />
+        <Route path="/settings/user-management" component={UserManagement} />
+        <Route path="/client-portal" component={ClientPortal} />
+        <Route path="/client-dashboard" component={ClientDashboard} />
+        <Route component={NotFound} />
+      </Switch>
+    </DashboardLayout>
+  );
+}
+
+function UnauthenticatedApp() {
+  return (
+    <Switch>
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
+      <Route path="/accept-invitation/:token" component={AcceptInvitation} />
+      <Route>
+        {() => <Login />}
+      </Route>
+    </Switch>
+  );
+}
+
+function AppRouter() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? <AuthenticatedApp /> : <UnauthenticatedApp />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <ThemeProvider defaultTheme="light" storageKey="finance-saas-theme">
         <Toaster />
-        <BrowserRouter>
-          <Routes>
-            {/* Main application routes with dashboard layout */}
-            <Route path="/" element={<DashboardLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="income" element={<Income />} />
-              <Route path="expenses" element={<Expenses />} />
-              <Route path="subscriptions" element={<Subscriptions />} />
-              <Route path="employees" element={<Employees />} />
-              <Route path="clients" element={<Clients />} />
-              <Route path="settings/categories" element={<Categories />} />
-              <Route path="settings/payment-sources" element={<PaymentSources />} />
-              <Route path="settings/user-management" element={<UserManagement />} />
-            </Route>
-            
-            {/* Client portal and dashboard for client users */}
-            <Route path="/client-portal" element={<ClientPortal />} />
-            <Route path="/client-dashboard" element={<ClientDashboard />} />
-            
-            {/* Accept invitation route */}
-            <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <Router>
+          <AppRouter />
+        </Router>
       </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
