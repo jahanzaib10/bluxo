@@ -162,6 +162,11 @@ export const expenses = pgTable("expenses", {
   date: date("date").notNull(),
   employeeId: uuid("employee_id").references(() => employees.id),
   categoryId: uuid("category_id").references(() => categories.id),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringFrequency: varchar("recurring_frequency", { 
+    enum: ['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly'] 
+  }),
+  recurringEndDate: date("recurring_end_date"),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });

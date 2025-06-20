@@ -930,7 +930,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/expenses", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
-      const { amount, description, date, employeeId, categoryId } = req.body;
+      const { 
+        amount, 
+        description, 
+        date, 
+        employeeId, 
+        categoryId, 
+        isRecurring, 
+        recurringFrequency, 
+        recurringEndDate 
+      } = req.body;
       
       if (!amount || !date) {
         return res.status(400).json({ message: "Amount and date are required" });
@@ -944,6 +953,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           date,
           employeeId: employeeId || null,
           categoryId: categoryId || null,
+          isRecurring: isRecurring || false,
+          recurringFrequency: recurringFrequency || null,
+          recurringEndDate: recurringEndDate || null,
           organizationId,
         })
         .returning();
@@ -952,6 +964,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating expense:", error);
       res.status(500).json({ message: "Failed to create expense" });
+    }
+  });
+
+  // Expenses CSV Import endpoint
+  app.post("/api/expenses/import", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { csvData } = req.body;
+      if (!csvData || !Array.isArray(csvData)) {
+        return res.status(400).json({ message: "Invalid CSV data" });
+      }
+
+      const organizationId = req.user.organizationId;
+      
+      // Get reference data for mapping
+      const employees = await db
+        .select()
+        .from(employeesTable)
+        .where(eq(employeesTable.organizationId, organizationId));
+      
+      const categories = await db
+        .select()
+        .from(categories)
+        .where(and(
+          eq(categories.organizationId, organizationId),
+          eq(categories.type, 'expense')
+        ));
+
+      const results = [];
+      const errors = [];
+      const validFrequencies = ['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly'];
+
+      for (const [index, row] of csvData.entries()) {
+        try {
+          const amount = sanitizePaymentAmount(row.amount || "0");
+          const date = parseFlexibleDate(row.date);
+          
+          if (!date) {
+            errors.push(`Row ${index + 1}: Invalid date format`);
+            continue;
+          }
+
+          if (amount === null || amount <= 0) {
+            errors.push(`Row ${index + 1}: Invalid amount`);
+            continue;
+          }
+
+          // Find employee by email
+          let employeeId = null;
+          if (row.employee_email) {
+            const employee = employees.find(e => 
+              e.email && normalizeText(e.email) === normalizeText(row.employee_email)
+            );
+            if (!employee) {
+              errors.push(`Row ${index + 1}: Employee not found with email: ${row.employee_email}`);
+              continue;
+            }
+            employeeId = employee.id;
+          }
+
+          // Find category by name and parent
+          let categoryId = null;
+          if (row.category_name) {
+            let category;
+            
+            if (row.category_parent) {
+              // Look for category with specific parent
+              const parentCategory = categories.find(c => 
+                normalizeText(c.name) === normalizeText(row.category_parent) && !c.parentId
+              );
+              
+              if (parentCategory) {
+                category = categories.find(c => 
+                  normalizeText(c.name) === normalizeText(row.category_name) && 
+                  c.parentId === parentCategory.id
+                );
+              }
+            } else {
+              // Look for category without parent requirement
+              category = categories.find(c => 
+                normalizeText(c.name) === normalizeText(row.category_name)
+              );
+            }
+
+            if (!category) {
+              const categoryDesc = row.category_parent 
+                ? `${row.category_parent} > ${row.category_name}`
+                : row.category_name;
+              errors.push(`Row ${index + 1}: Category not found: ${categoryDesc}`);
+              continue;
+            }
+            categoryId = category.id;
+          }
+
+          // Parse recurring fields
+          const isRecurring = parseBooleanValue(row.is_recurring);
+          let recurringFrequency = null;
+          let recurringEndDate = null;
+
+          if (isRecurring) {
+            if (row.recurring_frequency) {
+              const frequency = row.recurring_frequency.toLowerCase().trim();
+              if (!validFrequencies.includes(frequency)) {
+                errors.push(`Row ${index + 1}: Invalid recurring frequency: ${row.recurring_frequency}. Must be one of: ${validFrequencies.join(', ')}`);
+                continue;
+              }
+              recurringFrequency = frequency;
+            }
+
+            if (row.recurring_end_date) {
+              recurringEndDate = parseFlexibleDate(row.recurring_end_date);
+              if (!recurringEndDate) {
+                errors.push(`Row ${index + 1}: Invalid recurring end date format`);
+                continue;
+              }
+              
+              // Check if end date is in the past
+              const endDate = new Date(recurringEndDate);
+              const today = new Date();
+              if (endDate < today) {
+                errors.push(`Row ${index + 1}: Warning - Recurring end date is in the past: ${recurringEndDate}`);
+              }
+            }
+          }
+
+          const expenseData = {
+            amount: amount.toString(),
+            description: normalizeText(row.description || ''),
+            date,
+            employeeId,
+            categoryId,
+            isRecurring,
+            recurringFrequency,
+            recurringEndDate,
+            organizationId
+          };
+
+          const [newExpense] = await db
+            .insert(expenses)
+            .values(expenseData)
+            .returning();
+
+          results.push(newExpense);
+          
+        } catch (rowError) {
+          console.error(`Error processing row ${index + 1}:`, rowError);
+          errors.push(`Row ${index + 1}: ${rowError.message}`);
+        }
+      }
+
+      res.status(201).json({
+        message: `Successfully imported ${results.length} of ${csvData.length} expense records`,
+        imported: results.length,
+        total: csvData.length,
+        errors,
+        expenses: results
+      });
+      
+    } catch (error) {
+      console.error("Error importing expenses:", error);
+      res.status(500).json({ message: "Failed to import expenses" });
     }
   });
 
