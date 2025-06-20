@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   User, 
@@ -21,7 +21,7 @@ interface SettingsProps {
 }
 
 export default function Settings({ defaultTab }: SettingsProps) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   
   // Extract the tab from the current route
   const getCurrentTab = () => {
@@ -39,6 +39,10 @@ export default function Settings({ defaultTab }: SettingsProps) {
 
   const currentTab = getCurrentTab();
 
+  const handleTabChange = (value: string) => {
+    navigate(`/settings/${value}`);
+  };
+
   return (
     <div className="container mx-auto py-10">
       <div className="mx-auto max-w-6xl">
@@ -50,7 +54,7 @@ export default function Settings({ defaultTab }: SettingsProps) {
             </p>
           </div>
           
-          <Tabs value={currentTab} className="space-y-4">
+          <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
             <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
