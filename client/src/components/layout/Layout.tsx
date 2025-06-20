@@ -31,21 +31,21 @@ interface LayoutProps {
 }
 
 const mainNavItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: Home },
-  { path: '/income', label: 'Income', icon: TrendingUp },
-  { path: '/expenses', label: 'Expenses', icon: TrendingDown },
-  { path: '/subscriptions', label: 'Subscriptions', icon: RotateCcw },
-  { path: '/clients', label: 'Clients', icon: Users },
-  { path: '/employees', label: 'Employees', icon: UserCheck },
+  { path: '/dashboard', label: 'Dashboard', icon: Home, roles: ['super_admin', 'admin', 'manager', 'viewer'] },
+  { path: '/income', label: 'Income', icon: TrendingUp, roles: ['super_admin', 'admin', 'manager'] },
+  { path: '/expenses', label: 'Expenses', icon: TrendingDown, roles: ['super_admin', 'admin', 'manager'] },
+  { path: '/subscriptions', label: 'Subscriptions', icon: RotateCcw, roles: ['super_admin', 'admin', 'manager'] },
+  { path: '/clients', label: 'Clients', icon: Users, roles: ['super_admin', 'admin', 'manager'] },
+  { path: '/employees', label: 'Employees', icon: UserCheck, roles: ['super_admin', 'admin'] },
 ];
 
 const settingsNavItems = [
-  { path: '/settings/profile', label: 'Profile' },
-  { path: '/settings/security', label: 'Security' },
-  { path: '/settings/organization', label: 'Organization' },
-  { path: '/settings/categories', label: 'Categories' },
-  { path: '/settings/payment-sources', label: 'Payment Sources' },
-  { path: '/settings/user-management', label: 'User Management' },
+  { path: '/settings/profile', label: 'Profile', roles: ['super_admin', 'admin', 'manager', 'viewer'] },
+  { path: '/settings/security', label: 'Security', roles: ['super_admin', 'admin', 'manager', 'viewer'] },
+  { path: '/settings/organization', label: 'Organization', roles: ['super_admin', 'admin'] },
+  { path: '/settings/categories', label: 'Categories', roles: ['super_admin', 'admin', 'manager'] },
+  { path: '/settings/payment-sources', label: 'Payment Sources', roles: ['super_admin', 'admin', 'manager'] },
+  { path: '/settings/user-management', label: 'User Management', roles: ['super_admin', 'admin'] },
 ];
 
 export function Layout({ children }: LayoutProps) {
@@ -125,26 +125,28 @@ export function Layout({ children }: LayoutProps) {
       {/* Navigation */}
       <nav className="flex-1 px-4 pb-4 space-y-1 overflow-y-auto">
         {/* Main Navigation Items */}
-        {mainNavItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = isActivePath(item.path);
-          
-          return (
-            <Link key={item.path} href={item.path}>
-              <div
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
-                  isActive 
-                    ? "bg-blue-600 text-white" 
-                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                )}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span>{item.label}</span>
-              </div>
-            </Link>
-          );
-        })}
+        {mainNavItems
+          .filter(item => user?.role && item.roles.includes(user.role))
+          .map((item) => {
+            const Icon = item.icon;
+            const isActive = isActivePath(item.path);
+            
+            return (
+              <Link key={item.path} href={item.path}>
+                <div
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+                    isActive 
+                      ? "bg-blue-600 text-white" 
+                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  )}
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span>{item.label}</span>
+                </div>
+              </Link>
+            );
+          })}
 
         {/* Settings Section */}
         <div className="mt-6">
