@@ -22,8 +22,11 @@ export default function ProfileDropdown() {
     document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
     localStorage.removeItem('auth_token');
     
-    // Force a complete page reload to clear all state
-    window.location.href = '/login';
+    // Clear all React Query cache
+    queryClient.clear();
+    
+    // Force a complete page reload to ensure clean state
+    window.location.reload();
   };
 
   const getInitials = (name: string) => {
