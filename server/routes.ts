@@ -977,13 +977,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const organizationId = req.user.organizationId;
       
+      // Helper function to parse boolean values
+      function parseBooleanValue(value: string | boolean): boolean {
+        if (typeof value === 'boolean') return value;
+        if (!value) return false;
+        
+        const normalized = value.toString().toLowerCase().trim();
+        return ['true', 't', 'yes', 'y', '1', 'on'].includes(normalized);
+      }
+
       // Get reference data for mapping
       const employees = await db
         .select()
-        .from(employeesTable)
-        .where(eq(employeesTable.organizationId, organizationId));
+        .from(employees)
+        .where(eq(employees.organizationId, organizationId));
       
-      const categories = await db
+      const expenseCategories = await db
         .select()
         .from(categories)
         .where(and(
@@ -1030,19 +1039,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (row.category_parent) {
               // Look for category with specific parent
-              const parentCategory = categories.find(c => 
+              const parentCategory = expenseCategories.find(c => 
                 normalizeText(c.name) === normalizeText(row.category_parent) && !c.parentId
               );
               
               if (parentCategory) {
-                category = categories.find(c => 
+                category = expenseCategories.find(c => 
                   normalizeText(c.name) === normalizeText(row.category_name) && 
                   c.parentId === parentCategory.id
                 );
               }
             } else {
               // Look for category without parent requirement
-              category = categories.find(c => 
+              category = expenseCategories.find(c => 
                 normalizeText(c.name) === normalizeText(row.category_name)
               );
             }
