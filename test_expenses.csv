@@ -1,0 +1,4 @@
+date,amount,description,employee_email,category_name,category_parent,is_recurring,recurring_frequency,recurring_end_date
+2024-01-15,150.00,Office supplies,john@company.com,Office Supplies,Operations,false,,
+2024-01-20,75.50,Monthly software subscription,jane@company.com,Software,Technology,true,monthly,2024-12-31
+2024-01-25,300.00,Team lunch,bob@company.com,Meals,Operations,false,,

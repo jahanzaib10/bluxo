@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CategorySelect } from "@/components/CategorySelect";
@@ -64,12 +65,18 @@ export default function Expenses() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // State management
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [csvData, setCsvData] = useState("");
+  const [parsedData, setParsedData] = useState<CsvRow[]>([]);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [formData, setFormData] = useState<FormData>({
     amount: "",
     date: "",
@@ -81,24 +88,16 @@ export default function Expenses() {
     recurringEndDate: ""
   });
 
-  // CSV Import State
-  const [csvData, setCsvData] = useState("");
-  const [parsedData, setParsedData] = useState<CsvRow[]>([]);
-  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Data fetching
-  const { data: expenses = [], isLoading } = useQuery({
+  // Queries
+  const { data: expenses = [], isLoading } = useQuery<ExpenseRecord[]>({
     queryKey: ["/api/expenses"],
   });
 
-  const { data: employees = [] } = useQuery({
+  const { data: employees = [] } = useQuery<any[]>({
     queryKey: ["/api/employees"],
   });
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<any[]>({
     queryKey: ["/api/categories"],
   });
 
@@ -206,26 +205,27 @@ export default function Expenses() {
     }
   };
 
-  // CSV Import functions
+  // CSV Processing Functions
   const parseCsvData = (csvText: string): CsvRow[] => {
     const lines = csvText.trim().split('\n');
-    if (lines.length < 2) return [];
-
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    const data: CsvRow[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-      const row: any = {};
-      
-      headers.forEach((header, index) => {
-        row[header] = values[index] || '';
-      });
-      
-      data.push(row);
+    if (lines.length < 2) {
+      throw new Error("CSV must contain headers and at least one data row");
     }
 
-    return data;
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+    const dataLines = lines.slice(1);
+
+    return dataLines.map((line, index) => {
+      const values = line.split(',').map(v => v.trim().replace(/['"]/g, ''));
+      const row: any = {};
+      
+      headers.forEach((header, headerIndex) => {
+        const value = values[headerIndex] || '';
+        row[header] = value;
+      });
+
+      return row as CsvRow;
+    });
   };
 
   const validateCsvData = (data: CsvRow[]): ValidationError[] => {
@@ -246,7 +246,7 @@ export default function Expenses() {
         errors.push({ row: rowNum, field: 'category_name', message: 'Category name is required' });
       }
 
-      // Validate employee mapping
+      // Validate employee email if provided
       if (row.employee_email) {
         const employee = employees.find(e => 
           e.email && e.email.toLowerCase() === row.employee_email.toLowerCase()
@@ -350,26 +350,21 @@ export default function Expenses() {
       setParsedData(parsed);
       setValidationErrors(errors);
       setShowPreview(true);
-      
-      toast({
-        title: `Parsed ${parsed.length} rows`,
-        description: errors.length > 0 ? `Found ${errors.length} validation errors` : "Ready to import"
-      });
     } catch (error) {
-      toast({
-        title: "Failed to parse CSV",
-        description: "Please check your CSV format and try again",
-        variant: "destructive"
+      toast({ 
+        title: "Invalid CSV format", 
+        description: error.message,
+        variant: "destructive" 
       });
     }
   };
 
   const handleImport = () => {
     if (validationErrors.length > 0) {
-      toast({
-        title: "Cannot import with validation errors",
-        description: "Please fix all validation errors before importing",
-        variant: "destructive"
+      toast({ 
+        title: "Cannot import with validation errors", 
+        description: "Please fix all errors before importing",
+        variant: "destructive" 
       });
       return;
     }
@@ -430,19 +425,17 @@ export default function Expenses() {
     }
   };
 
-  // Filter expenses based on search term
-  const filteredExpenses = expenses.filter((expense: ExpenseRecord) =>
-    expense.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.categoryName?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredExpenses = expenses.filter((record: ExpenseRecord) =>
+    record.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.categoryName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Form Component
   const FormComponent = () => (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="amount">Amount ($)</Label>
+          <Label htmlFor="amount">Amount</Label>
           <Input
             id="amount"
             type="number"
@@ -559,7 +552,6 @@ export default function Expenses() {
           onClick={() => {
             setIsAddOpen(false);
             setIsEditOpen(false);
-            setEditingExpense(null);
             resetForm();
           }}
         >
@@ -573,15 +565,9 @@ export default function Expenses() {
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Expense Management</h1>
-          <p className="text-muted-foreground mt-1">
-            Track and manage business expenses with import capabilities
-          </p>
-        </div>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Expenses</h1>
         <div className="flex space-x-2">
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
@@ -590,7 +576,7 @@ export default function Expenses() {
                 Import CSV
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Import Expense Records</DialogTitle>
               </DialogHeader>
@@ -766,66 +752,100 @@ export default function Expenses() {
 
                   {/* Validation Errors */}
                   {validationErrors.length > 0 && (
-                    <div className="bg-red-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-red-900 mb-2">Validation Errors</h4>
-                      <div className="max-h-40 overflow-y-auto">
-                        {validationErrors.map((error, index) => (
-                          <div key={index} className="text-sm text-red-700 mb-1">
-                            Row {error.row}, {error.field}: {error.message}
-                          </div>
-                        ))}
-                      </div>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="font-medium text-red-900 mb-2">
+                        Validation Errors ({validationErrors.length})
+                      </h4>
+                      <ScrollArea className="h-32">
+                        <div className="space-y-2">
+                          {validationErrors.map((error, index) => (
+                            <div key={index} className="text-sm">
+                              <span className="font-medium text-red-700">Row {error.row}:</span>
+                              <span className="text-red-600 ml-2">
+                                {error.field} - {error.message}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
                     </div>
                   )}
 
-                  {/* Preview Table */}
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="max-h-60 overflow-y-auto">
+                  {/* Data Preview */}
+                  <div className="border rounded-lg">
+                    <div className="bg-gray-50 px-4 py-2 border-b">
+                      <h4 className="font-medium">Data Preview</h4>
+                    </div>
+                    <ScrollArea className="h-64">
                       <Table>
-                        <TableHeader className="sticky top-0 bg-white">
+                        <TableHeader>
                           <TableRow>
+                            <TableHead className="w-12">#</TableHead>
                             <TableHead>Date</TableHead>
                             <TableHead>Amount</TableHead>
                             <TableHead>Description</TableHead>
                             <TableHead>Employee</TableHead>
                             <TableHead>Category</TableHead>
                             <TableHead>Recurring</TableHead>
+                            <TableHead>Frequency</TableHead>
+                            <TableHead>End Date</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {parsedData.slice(0, 10).map((row, index) => (
-                            <TableRow key={index}>
-                              <TableCell>{row.date}</TableCell>
-                              <TableCell>${row.amount}</TableCell>
-                              <TableCell className="max-w-xs truncate">{row.description}</TableCell>
-                              <TableCell>{row.employee_email || 'N/A'}</TableCell>
-                              <TableCell>
-                                {row.category_parent ? `${row.category_parent} → ${row.category_name}` : row.category_name}
-                              </TableCell>
-                              <TableCell>
-                                {['true', 't', 'yes', 'y', '1', 'on'].includes(row.is_recurring?.toLowerCase() || '') ? 'Yes' : 'No'}
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          {parsedData.map((row, index) => {
+                            const rowErrors = validationErrors.filter(e => e.row === index + 1);
+                            const hasErrors = rowErrors.length > 0;
+                            
+                            return (
+                              <TableRow key={index} className={hasErrors ? "bg-red-50" : ""}>
+                                <TableCell className="font-medium">
+                                  {index + 1}
+                                  {hasErrors && (
+                                    <AlertTriangle className="h-4 w-4 text-red-500 inline ml-1" />
+                                  )}
+                                </TableCell>
+                                <TableCell>{row.date || '-'}</TableCell>
+                                <TableCell>${row.amount || '0'}</TableCell>
+                                <TableCell className="max-w-32 truncate">
+                                  {row.description || '-'}
+                                </TableCell>
+                                <TableCell>{row.employee_email || '-'}</TableCell>
+                                <TableCell>
+                                  {row.category_parent && row.category_name 
+                                    ? `${row.category_parent} > ${row.category_name}`
+                                    : row.category_name || '-'
+                                  }
+                                </TableCell>
+                                <TableCell>
+                                  {['true', 't', 'yes', 'y', '1', 'on'].includes(
+                                    row.is_recurring?.toLowerCase() || ''
+                                  ) ? (
+                                    <Badge variant="secondary">Yes</Badge>
+                                  ) : (
+                                    <Badge variant="outline">No</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>{row.recurring_frequency || '-'}</TableCell>
+                                <TableCell>{row.recurring_end_date || '-'}</TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
-                    </div>
+                    </ScrollArea>
                   </div>
-                  
+
                   <div className="flex justify-end space-x-2">
                     <Button variant="outline" onClick={resetImportState}>
                       Cancel
                     </Button>
-                    <Button 
+                    <Button
                       onClick={handleImport}
                       disabled={validationErrors.length > 0 || importMutation.isPending}
-                      className="bg-purple-600 hover:bg-purple-700"
+                      className="bg-green-600 hover:bg-green-700"
                     >
                       {importMutation.isPending ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Importing...
-                        </>
+                        <>Processing...</>
                       ) : (
                         <>
                           <Upload className="h-4 w-4 mr-2" />
