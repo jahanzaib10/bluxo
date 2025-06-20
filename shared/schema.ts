@@ -38,7 +38,10 @@ export const users = pgTable("users", {
   name: varchar("name"),
   profileImageUrl: varchar("profile_image_url"),
   organizationId: uuid("organization_id").references(() => organizations.id),
-  role: varchar("role").default("member"),
+  role: varchar("role", { enum: ["super_admin", "admin", "manager", "client", "viewer"] }).default("viewer"),
+  type: varchar("type", { enum: ["internal", "client"] }).default("internal"),
+  status: varchar("status", { enum: ["active", "suspended", "inactive"] }).default("active"),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -77,6 +80,20 @@ export const clientAuthTokens = pgTable("client_auth_tokens", {
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userInvitations = pgTable("user_invitations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: varchar("email", { length: 255 }).notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  role: varchar("role", { enum: ["super_admin", "admin", "manager", "client", "viewer"] }).notNull(),
+  type: varchar("type", { enum: ["internal", "client"] }).notNull(),
+  status: varchar("status", { enum: ["pending", "expired", "accepted", "cancelled"] }).default("pending"),
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
+  invitedById: varchar("invited_by_id").references(() => users.id).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const employees = pgTable("employees", {
@@ -175,10 +192,22 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   subscriptions: many(subscriptions),
 }));
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [users.organizationId],
     references: [organizations.id],
+  }),
+  sentInvitations: many(userInvitations),
+}));
+
+export const userInvitationsRelations = relations(userInvitations, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [userInvitations.organizationId],
+    references: [organizations.id],
+  }),
+  invitedBy: one(users, {
+    fields: [userInvitations.invitedById],
+    references: [users.id],
   }),
 }));
 
@@ -374,9 +403,24 @@ export const upsertUserSchema = createInsertSchema(users).partial().extend({
   id: z.string(),
 });
 
+export const insertUserInvitationSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["super_admin", "admin", "manager", "client", "viewer"]),
+  type: z.enum(["internal", "client"]),
+});
+
+export const updateUserRoleSchema = z.object({
+  role: z.enum(["super_admin", "admin", "manager", "client", "viewer"]),
+});
+
+export const updateUserStatusSchema = z.object({
+  status: z.enum(["active", "suspended", "inactive"]),
+});
+
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type User = typeof users.$inferSelect;
+export type UserInvitation = typeof userInvitations.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type ClientPermissions = typeof clientPermissions.$inferSelect;
 export type ClientAuthToken = typeof clientAuthTokens.$inferSelect;
@@ -389,6 +433,9 @@ export type Subscription = typeof subscriptions.$inferSelect;
 
 // Insert types for forms
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
+export type InsertUserInvitation = z.infer<typeof insertUserInvitationSchema>;
+export type UpdateUserRole = z.infer<typeof updateUserRoleSchema>;
+export type UpdateUserStatus = z.infer<typeof updateUserStatusSchema>;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type InsertClientPermissions = z.infer<typeof insertClientPermissionsSchema>;
 export type ClientAuthRequest = z.infer<typeof clientAuthRequestSchema>;

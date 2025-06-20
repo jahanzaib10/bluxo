@@ -1,0 +1,133 @@
+Please build a fully functional, enterprise-grade user management system inside `/settings/user-management`.
+
+---
+
+### ✅ CORE OBJECTIVES
+
+1. Support full team management for the currently logged-in user's organization
+2. Manage user roles, invitations, and status
+3. Separate internal vs client users
+4. Integrate with the already existing backend roles/session/invite logic
+
+---
+
+### 📂 PAGE STRUCTURE
+
+🗂 Route: `/settings/user-management`
+
+Split into two tabs:
+
+#### 📋 Tab 1: Active Users
+- Display a data table with columns:
+  - Name
+  - Email
+  - Role (super_admin, admin, manager, client, viewer)
+  - Type (`internal`, `client`)
+  - Status (active, suspended)
+  - Created At
+  - Last Login (optional — if tracking session logs)
+  - Actions (edit, deactivate, delete)
+
+#### ✉️ Tab 2: Pending Invitations
+- Display pending invites from `user_invitations` table
+- Columns:
+  - Email
+  - Invited Role
+  - Type (client/internal)
+  - Status (pending, expired)
+  - Expires At
+  - Actions (resend invite, cancel)
+
+---
+
+### 🧑‍💼 ADD/INVITE USER FLOW
+
+- Button: `Invite User`
+- Modal Form:
+  - Email
+  - Role (dropdown)
+  - Type (dropdown: internal/client)
+- On submit:
+  - Create a new invitation in `user_invitations` table
+  - Send email with unique secure token
+  - Add row to “Pending Invitations” table
+- Show toast: “Invitation sent to {{email}}”
+
+---
+
+### 🔁 USER ACTIONS
+
+**For Active Users:**
+- Change Role (dropdown in-table)
+  - Only `super_admin` or `admin` can modify others
+- Change Type (optional, if allowed)
+- Deactivate/reactivate toggle
+- Delete user (optional — usually for cleanup)
+
+**For Invited Users:**
+- Resend invitation
+- Cancel invitation
+
+---
+
+### 🧠 RULES & PERMISSIONS
+
+- `super_admin` can manage all users in their organization
+- `admin` can manage `manager`, `client`, and `viewer` only
+- Users **cannot modify their own role or type**
+- Invitations must auto-expire (check or enforce on load)
+- Inviting duplicate emails should return validation error
+- All users must be scoped by `organization_id`
+
+---
+
+### 🔎 UI BEHAVIOR
+
+- Filters: by role, type, and status
+- Search bar: search by name or email
+- Action feedback: toast on success/error
+- Confirmation dialogs for destructive actions
+
+---
+
+### 🧪 QA TEST CASES
+
+**✅ Inviting a User:**
+- Send invitation with role/type → appears in Pending list
+- Invite email gets link with token (mock or real)
+
+**✅ Managing Users:**
+- Role dropdown updates immediately
+- Cannot change role if not `admin+`
+- Self-role cannot be edited
+
+**✅ Edge Cases:**
+- Invite same email twice → error
+- Invite with invalid type → blocked
+- Expired token → cannot accept
+
+---
+
+### 📘 API / Swagger Coverage
+
+- `GET /api/users` → list all users in org
+- `POST /api/users/invite`
+- `PUT /api/users/:id/role`
+- `PUT /api/users/:id/status`
+- `DELETE /api/users/:id`
+- `GET /api/user-invitations` → pending invites
+- `POST /api/user-invitations/resend`
+- `DELETE /api/user-invitations/:id`
+
+---
+
+### 🔁 DO NOT
+
+- Do not rewrite or touch existing auth/session/login/token flows
+- Do not affect `/client-dashboard` or backoffice routing
+- Do not touch invitation backend — only wire it to UI
+
+---
+
+This user management system should look and feel like a modern enterprise SaaS admin console (e.g., Notion, Stripe, Linear).
+

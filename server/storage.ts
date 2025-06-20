@@ -9,6 +9,7 @@ import {
   expenses,
   subscriptions,
   users,
+  userInvitations,
   type Category, 
   type InsertCategory,
   type Client, 
@@ -27,7 +28,11 @@ import {
   type Subscription,
   type InsertSubscription,
   type User, 
-  type UpsertUser 
+  type UpsertUser,
+  type UserInvitation,
+  type InsertUserInvitation,
+  type UpdateUserRole,
+  type UpdateUserStatus
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, isNull } from "drizzle-orm";
