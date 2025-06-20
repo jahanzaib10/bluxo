@@ -23,6 +23,7 @@ import {
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { queryClient } from '@/lib/queryClient';
 import ProfileDropdown from '@/components/ProfileDropdown';
 
 interface LayoutProps {
@@ -68,11 +69,15 @@ export function Layout({ children }: LayoutProps) {
       document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
       localStorage.removeItem('auth_token');
       
-      // Reload the page to trigger re-authentication check
-      window.location.reload();
+      // Clear all query cache to force re-authentication
+      queryClient.clear();
+      
+      // Invalidate the auth query specifically
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
     } catch (error) {
       console.error('Logout error:', error);
-      // Force reload even if there's an error
+      // Force reload as fallback
       window.location.reload();
     }
   };
