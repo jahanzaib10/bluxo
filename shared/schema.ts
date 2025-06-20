@@ -119,8 +119,10 @@ export const categories = pgTable("categories", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
   type: varchar("type").notNull(), // "income" or "expense"
+  parentId: uuid("parent_id").references(() => categories.id),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const paymentSources = pgTable("payment_sources", {
@@ -253,6 +255,14 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
     fields: [categories.organizationId],
     references: [organizations.id],
   }),
+  parent: one(categories, {
+    fields: [categories.parentId],
+    references: [categories.id],
+    relationName: "parentChild",
+  }),
+  children: many(categories, {
+    relationName: "parentChild",
+  }),
   income: many(income),
   expenses: many(expenses),
 }));
@@ -355,6 +365,7 @@ export const insertEmployeeSchema = z.object({
 export const insertCategorySchema = z.object({
   name: z.string().min(1),
   type: z.enum(["income", "expense"]),
+  parentId: z.string().uuid().optional(),
 });
 
 export const insertPaymentSourceSchema = z.object({
