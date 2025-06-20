@@ -60,6 +60,12 @@ export default function Employees() {
     queryKey: ["/api/employees"],
   });
 
+  // Create a map of employee IDs to names for manager lookup
+  const employeeMap = employees.reduce((acc: Record<string, string>, emp: Employee) => {
+    acc[emp.id] = emp.name;
+    return acc;
+  }, {});
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       await apiRequest("/api/employees", {
@@ -487,6 +493,9 @@ export default function Employees() {
                     <TableHead>Seniority</TableHead>
                     <TableHead>Payment</TableHead>
                     <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead>Birth Date</TableHead>
+                    <TableHead>Manager</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -514,6 +523,9 @@ export default function Employees() {
                         }
                       </TableCell>
                       <TableCell>{employee.startDate ? new Date(employee.startDate).toLocaleDateString() : "—"}</TableCell>
+                      <TableCell>{employee.endDate ? new Date(employee.endDate).toLocaleDateString() : "—"}</TableCell>
+                      <TableCell>{employee.birthDate ? new Date(employee.birthDate).toLocaleDateString() : "—"}</TableCell>
+                      <TableCell>{employee.directManagerId ? employeeMap[employee.directManagerId] || "—" : "—"}</TableCell>
                       <TableCell>
                         <Badge variant={employee.status === 'active' ? 'default' : employee.status === 'inactive' ? 'secondary' : 'destructive'}>
                           {employee.status}
