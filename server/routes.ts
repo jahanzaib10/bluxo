@@ -9,12 +9,17 @@ import {
   expenses, 
   subscriptions,
   paymentSources,
+  users,
+  userInvitations,
   insertIncomeSchema,
   insertExpenseSchema,
   insertPaymentSourceSchema,
   insertClientPermissionsSchema,
   clientAuthRequestSchema,
-  insertSubscriptionSchema
+  insertSubscriptionSchema,
+  insertUserInvitationSchema,
+  updateUserRoleSchema,
+  updateUserStatusSchema
 } from "@shared/schema";
 import { storage } from "./storage";
 import { eq, sum, desc, and } from "drizzle-orm";
@@ -1541,6 +1546,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting subscription:", error);
       res.status(500).json({ message: "Failed to delete subscription" });
+    }
+  });
+
+  // User Management API Routes
+  app.get("/api/users", mockAuth, async (req: any, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      const users = await storage.getUsers(organizationId);
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/users/invite", mockAuth, async (req: any, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      const invitedById = req.user.id || "mock-user-id";
+      
+      const validatedData = insertUserInvitationSchema.parse(req.body);
+      
+      // Check if user already exists or has pending invitation
+      const existingUsers = await storage.getUsers(organizationId);
+      const existingInvitations = await storage.getUserInvitations(organizationId);
+      
+      const emailExists = existingUsers.some(user => user.email === validatedData.email) ||
+                         existingInvitations.some(inv => inv.email === validatedData.email && inv.status === 'pending');
+      
+      if (emailExists) {
+        return res.status(400).json({ message: "User with this email already exists or has a pending invitation" });
+      }
+      
+      const invitation = await storage.createUserInvitation(validatedData, invitedById, organizationId);
+      
+      // In a real app, send email here
+      console.log(`Invitation sent to ${validatedData.email} with token: ${invitation.token}`);
+      
+      res.json({ message: "Invitation sent successfully", invitation });
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ message: "Failed to send invitation" });
+    }
+  });
+
+  app.put("/api/users/:id/role", mockAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = updateUserRoleSchema.parse(req.body);
+      
+      const updatedUser = await storage.updateUserRole(id, validatedData);
+      
+      if (updatedUser) {
+        res.json(updatedUser);
+      } else {
+        res.status(404).json({ message: "User not found" });
+      }
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  app.put("/api/users/:id/status", mockAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = updateUserStatusSchema.parse(req.body);
+      
+      const updatedUser = await storage.updateUserStatus(id, validatedData);
+      
+      if (updatedUser) {
+        res.json(updatedUser);
+      } else {
+        res.status(404).json({ message: "User not found" });
+      }
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ message: "Failed to update user status" });
+    }
+  });
+
+  app.delete("/api/users/:id", mockAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteUser(id);
+      
+      if (success) {
+        res.json({ message: "User deleted successfully" });
+      } else {
+        res.status(404).json({ message: "User not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // User Invitations API Routes
+  app.get("/api/user-invitations", mockAuth, async (req: any, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      const invitations = await storage.getUserInvitations(organizationId);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  app.post("/api/user-invitations/:id/resend", mockAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = req.user.organizationId;
+      const invitedById = req.user.id || "mock-user-id";
+      
+      // Get existing invitation
+      const invitations = await storage.getUserInvitations(organizationId);
+      const existingInvitation = invitations.find(inv => inv.id === id);
+      
+      if (!existingInvitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+      
+      // Create new invitation with same details
+      const newInvitation = await storage.createUserInvitation(
+        {
+          email: existingInvitation.email,
+          role: existingInvitation.role,
+          type: existingInvitation.type,
+        },
+        invitedById,
+        organizationId
+      );
+      
+      // Mark old invitation as cancelled
+      await storage.updateInvitationStatus(id, "cancelled");
+      
+      res.json({ message: "Invitation resent successfully", invitation: newInvitation });
+    } catch (error) {
+      console.error("Error resending invitation:", error);
+      res.status(500).json({ message: "Failed to resend invitation" });
+    }
+  });
+
+  app.delete("/api/user-invitations/:id", mockAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteInvitation(id);
+      
+      if (success) {
+        res.json({ message: "Invitation cancelled successfully" });
+      } else {
+        res.status(404).json({ message: "Invitation not found" });
+      }
+    } catch (error) {
+      console.error("Error cancelling invitation:", error);
+      res.status(500).json({ message: "Failed to cancel invitation" });
     }
   });
 

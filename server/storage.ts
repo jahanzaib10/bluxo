@@ -43,6 +43,19 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: UpsertUser): Promise<User>;
 
+  // User management methods
+  getUsers(organizationId: string): Promise<User[]>;
+  updateUserRole(id: string, role: UpdateUserRole): Promise<User | undefined>;
+  updateUserStatus(id: string, status: UpdateUserStatus): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
+
+  // User invitation methods
+  getUserInvitations(organizationId: string): Promise<UserInvitation[]>;
+  createUserInvitation(invitation: InsertUserInvitation, invitedById: string, organizationId: string): Promise<UserInvitation>;
+  getInvitationByToken(token: string): Promise<UserInvitation | undefined>;
+  updateInvitationStatus(id: string, status: string): Promise<UserInvitation | undefined>;
+  deleteInvitation(id: string): Promise<boolean>;
+
   // Category methods
   getCategories(): Promise<Category[]>;
   getCategory(id: string): Promise<Category | undefined>;
@@ -425,6 +438,76 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSubscription(id: string): Promise<boolean> {
     const result = await db.delete(subscriptions).where(eq(subscriptions.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // User management methods
+  async getUsers(organizationId: string): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.organizationId, organizationId));
+  }
+
+  async updateUserRole(id: string, roleData: UpdateUserRole): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ role: roleData.role, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserStatus(id: string, statusData: UpdateUserStatus): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ status: statusData.status, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // User invitation methods
+  async getUserInvitations(organizationId: string): Promise<UserInvitation[]> {
+    return await db.select().from(userInvitations).where(eq(userInvitations.organizationId, organizationId));
+  }
+
+  async createUserInvitation(invitation: InsertUserInvitation, invitedById: string, organizationId: string): Promise<UserInvitation> {
+    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+
+    const [userInvitation] = await db
+      .insert(userInvitations)
+      .values({
+        ...invitation,
+        token,
+        invitedById,
+        organizationId,
+        expiresAt,
+      })
+      .returning();
+    return userInvitation;
+  }
+
+  async getInvitationByToken(token: string): Promise<UserInvitation | undefined> {
+    const [invitation] = await db.select().from(userInvitations).where(eq(userInvitations.token, token));
+    return invitation;
+  }
+
+  async updateInvitationStatus(id: string, status: string): Promise<UserInvitation | undefined> {
+    const [invitation] = await db
+      .update(userInvitations)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(userInvitations.id, id))
+      .returning();
+    return invitation;
+  }
+
+  async deleteInvitation(id: string): Promise<boolean> {
+    const result = await db.delete(userInvitations).where(eq(userInvitations.id, id));
     return result.rowCount! > 0;
   }
 }

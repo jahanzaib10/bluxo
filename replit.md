@@ -177,6 +177,15 @@ Changelog:
   * Added billing cycle options: monthly, quarterly, bi-annual, yearly with visual badges
   * Integrated client assignment for client-billed subscriptions with revenue tracking
   * Built reconciliation status tracking and comprehensive subscription analytics
+- June 20, 2025. Built complete enterprise-grade user management system at /settings/user-management
+  * Enhanced users table with role, department, phoneNumber, status, lastLoginAt fields
+  * Created comprehensive userInvitations table with token-based invitation workflow
+  * Implemented team management with role-based permissions (admin, manager, editor, viewer)
+  * Built invitation system with email-based invites, token generation, and expiry tracking
+  * Added comprehensive user management API with CRUD operations, role updates, status management
+  * Created modern user management UI with team member listing, invitation management, and stats dashboard
+  * Implemented user status management (active, inactive, suspended) with visual indicators
+  * Added invitation workflow with pending, accepted, expired, cancelled states and resend functionality
 ```
 
 ## User Preferences
