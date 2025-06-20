@@ -82,11 +82,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [newClient] = await db
         .insert(clients)
         .values({
-          id: randomUUID(),
           name,
           email: email || null,
           organizationId,
-          createdAt: new Date(),
         })
         .returning();
       
@@ -126,12 +124,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [newEmployee] = await db
         .insert(employees)
         .values({
-          id: randomUUID(),
           name,
           email: email || null,
           position: position || null,
           organizationId,
-          createdAt: new Date(),
         })
         .returning();
       
@@ -171,11 +167,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [newCategory] = await db
         .insert(categories)
         .values({
-          id: randomUUID(),
           name,
           type,
           organizationId,
-          createdAt: new Date(),
         })
         .returning();
       
@@ -215,14 +209,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [newIncome] = await db
         .insert(income)
         .values({
-          id: randomUUID(),
           amount,
           description: description || null,
           date,
           clientId: clientId || null,
           categoryId: categoryId || null,
           organizationId,
-          createdAt: new Date(),
         })
         .returning();
       
@@ -262,14 +254,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [newExpense] = await db
         .insert(expenses)
         .values({
-          id: randomUUID(),
           amount,
           description: description || null,
           date,
           employeeId: employeeId || null,
           categoryId: categoryId || null,
           organizationId,
-          createdAt: new Date(),
         })
         .returning();
       
