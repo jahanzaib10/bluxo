@@ -1,158 +1,284 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, Users, Building } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { Plus, Edit, Trash2, Users, Settings, Search, Mail, Building2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { apiRequest } from '@/lib/queryClient';
 
 export function ClientsTab() {
-  const { toast } = useToast();
+  const [showForm, setShowForm] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
+  const [searchValue, setSearchValue] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: ''
+  });
+
   const queryClient = useQueryClient();
-  
-  const { data: clients = [], isLoading } = useQuery({
+  const { toast } = useToast();
+
+  const { data: clients = [] } = useQuery({
     queryKey: ['/api/clients'],
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest('DELETE', `/api/clients/${id}`),
+  // Filter clients based on search
+  const filteredClients = useMemo(() => {
+    if (!Array.isArray(clients) || !searchValue) return clients;
+    
+    return clients.filter((client: any) => {
+      const searchTerm = searchValue.toLowerCase();
+      return (
+        client.name?.toLowerCase().includes(searchTerm) ||
+        client.email?.toLowerCase().includes(searchTerm)
+      );
+    });
+  }, [clients, searchValue]);
+
+  const createClient = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest('POST', '/api/clients', data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
-      toast({
-        title: "Success",
-        description: "Client deleted successfully",
-      });
+      setShowForm(false);
+      setFormData({ name: '', email: '' });
+      toast({ title: "Success", description: "Client created successfully." });
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete client",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
+  const updateClient = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      return apiRequest('PUT', `/api/clients/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      setEditingClient(null);
+      setFormData({ name: '', email: '' });
+      setShowForm(false);
+      toast({ title: "Success", description: "Client updated successfully." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteClient = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('DELETE', `/api/clients/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      toast({ title: "Success", description: "Client deleted successfully." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingClient) {
+      updateClient.mutate({ ...formData, id: editingClient.id });
+    } else {
+      createClient.mutate(formData);
+    }
+  };
+
+  const handleEdit = (client: any) => {
+    setEditingClient(client);
+    setFormData({
+      name: client.name,
+      email: client.email || ''
+    });
+    setShowForm(true);
+  };
+
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this client?')) {
-      deleteMutation.mutate(id);
+      deleteClient.mutate(id);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'active':
-        return 'bg-green-100 text-green-700';
-      case 'inactive':
-        return 'bg-red-100 text-red-700';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingClient(null);
+    setFormData({ name: '', email: '' });
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-lg">Loading client data...</div>
-      </div>
-    );
-  }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-6 border-b">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Clients</h1>
-            <p className="text-sm text-muted-foreground">Manage your client relationships</p>
-          </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Client
-          </Button>
-        </div>
-        
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-blue-800 flex items-center">
-              <Building className="mr-2 h-4 w-4" />
-              Total Clients
-            </CardTitle>
+    <div className="space-y-6">
+      {/* Header with Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-700">
+            <div className="text-2xl font-bold">
               {Array.isArray(clients) ? clients.length : 0}
             </div>
-            <p className="text-xs text-blue-600">
-              Active client relationships
+            <p className="text-xs text-muted-foreground">
+              Active client accounts
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">With Email</CardTitle>
+            <Mail className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {Array.isArray(clients) ? clients.filter((c: any) => c.email).length : 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Have contact email
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">New This Month</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {Array.isArray(clients) ? clients.filter((c: any) => {
+                if (!c.createdAt) return false;
+                const clientDate = new Date(c.createdAt);
+                const currentDate = new Date();
+                return clientDate.getMonth() === currentDate.getMonth() && 
+                       clientDate.getFullYear() === currentDate.getFullYear();
+              }).length : 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Added this month
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex-1 overflow-auto p-6">
-        {Array.isArray(clients) && clients.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {clients.map((client: any) => (
-              <Card key={client.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-lg mb-1">{client.name}</h3>
-                      {client.company && (
-                        <p className="text-sm text-gray-600 mb-2">{client.company}</p>
-                      )}
-                    </div>
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(client.status)}`}>
-                      {client.status || 'Active'}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-1 text-sm text-muted-foreground mb-4">
-                    {client.email && (
-                      <p>Email: {client.email}</p>
-                    )}
-                    {client.phone && (
-                      <p>Phone: {client.phone}</p>
-                    )}
-                    {client.industry && (
-                      <p>Industry: {client.industry}</p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleDelete(client.id)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <Users className="h-12 w-12 mb-4 text-gray-300" />
-            <h3 className="text-lg font-medium mb-2">No clients found</h3>
-            <p className="text-sm text-center mb-4">
-              Start building your client base by adding your first client
-            </p>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Your First Client
-            </Button>
-          </div>
-        )}
+      {/* Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search clients..."
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            className="w-64"
+          />
+        </div>
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Client
+        </Button>
       </div>
+
+      {/* Client List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Client Directory</CardTitle>
+          <CardDescription>Manage your client relationships and contact information</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {Array.isArray(filteredClients) && filteredClients.map((client: any) => (
+              <div key={client.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="font-medium">{client.name}</h3>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    {client.email ? (
+                      <div className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        <span>{client.email}</span>
+                      </div>
+                    ) : (
+                      <span>No email on file</span>
+                    )}
+                    {client.createdAt && (
+                      <span>Added: {new Date(client.createdAt).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(client)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(client.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {(!Array.isArray(filteredClients) || filteredClients.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                {searchValue ? 'No clients match your search' : 'No clients found'}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Form */}
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{editingClient ? 'Edit Client' : 'Add New Client'}</CardTitle>
+            <CardDescription>
+              {editingClient ? 'Update client information' : 'Enter details for the new client'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Client Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter client name"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="Enter client email (optional)"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createClient.isPending || updateClient.isPending}>
+                  {editingClient ? 'Update' : 'Create'} Client
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
