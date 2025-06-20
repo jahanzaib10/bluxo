@@ -195,6 +195,7 @@ Changelog:
   * Integrated owner (jay@dartnox.com) into Team Members with super_admin role and self-editing restrictions
   * Fixed invitation URLs to use actual app domain instead of placeholder
   * Resolved frontend data structure issues with invitation verification
+  * Fixed redirect path from /auth/login to /login after invitation acceptance
   * Completed end-to-end testing with real email delivery and account creation workflow
   * Fixed JavaScript errors in invitation acceptance page with proper null checks
 ```

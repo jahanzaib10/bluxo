@@ -63,7 +63,7 @@ export default function AcceptInvitation() {
       });
       // Redirect to login page after successful registration
       setTimeout(() => {
-        navigate("/auth/login");
+        navigate("/login");
       }, 2000);
     },
     onError: (error: any) => {
