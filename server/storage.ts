@@ -41,7 +41,9 @@ export interface IStorage {
   // User methods (legacy)
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: UpsertUser): Promise<User>;
+  updateUserLastLogin(id: string): Promise<void>;
 
   // User management methods
   getUsers(organizationId: string): Promise<User[]>;
@@ -126,6 +128,17 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.name, username));
     return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async updateUserLastLogin(id: string): Promise<void> {
+    await db.update(users)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(users.id, id));
   }
 
   async createUser(insertUser: UpsertUser): Promise<User> {

@@ -25,21 +25,29 @@ import { storage } from "./storage";
 import { eq, sum, desc, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { sendInvitationEmail } from "./emailService";
-
-// Mock auth middleware for now
-function mockAuth(req: any, res: any, next: any) {
-  req.user = { 
-    id: "owner-user-id",
-    email: "jay@dartnox.com",
-    organizationId: "2723d846-8be7-4d00-9892-ea199b74d73d" 
-  };
-  next();
-}
+import { 
+  authenticateToken, 
+  requireRole, 
+  requireAdmin, 
+  requireSameOrganization,
+  validateClientToken,
+  login,
+  signup,
+  logout,
+  getCurrentUser,
+  AuthRequest
+} from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // Dashboard analytics endpoint
-  app.get("/api/dashboard/analytics", mockAuth, async (req: any, res) => {
+  // Authentication routes (public)
+  app.post("/api/auth/login", login);
+  app.post("/api/auth/signup", signup);
+  app.post("/api/auth/logout", logout);
+  app.get("/api/auth/user", authenticateToken, getCurrentUser);
+  
+  // Dashboard analytics endpoint (protected)
+  app.get("/api/dashboard/analytics", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       
@@ -72,7 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Clients endpoints
-  app.get("/api/clients", mockAuth, async (req: any, res) => {
+  app.get("/api/clients", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const result = await db
@@ -88,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/clients", mockAuth, async (req: any, res) => {
+  app.post("/api/clients", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       const { name, email } = req.body;

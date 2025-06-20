@@ -166,15 +166,15 @@ export async function validateClientToken(req: Request, res: Response, next: Nex
 // Login handler
 export async function login(req: Request, res: Response) {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password are required' });
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Get user from database
-    const user = await storage.getUserByUsername(username);
-    if (!user) {
+    // Get user from database by email
+    const user = await storage.getUserByEmail(email);
+    if (!user || !user.password) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -184,8 +184,23 @@ export async function login(req: Request, res: Response) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Generate token
-    const token = generateToken({ id: user.id, username: user.username });
+    // Check if user is active
+    if (user.status !== 'active') {
+      return res.status(401).json({ message: 'Account is inactive' });
+    }
+
+    // Generate token with full user data
+    const token = generateToken({ 
+      id: user.id, 
+      username: user.name || user.email,
+      email: user.email,
+      role: user.role,
+      type: user.type,
+      organizationId: user.organizationId
+    });
+
+    // Update last login time
+    await storage.updateUserLastLogin(user.id);
 
     // Set HTTP-only cookie
     res.cookie('auth_token', token, {
@@ -201,7 +216,11 @@ export async function login(req: Request, res: Response) {
       token,
       user: {
         id: user.id,
-        username: user.username,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        type: user.type,
+        organizationId: user.organizationId
       },
     });
   } catch (error) {
