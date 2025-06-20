@@ -64,7 +64,7 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: async ({ queryKey }) => {
         const [url] = queryKey as [string, ...unknown[]];
-        return await apiRequest("GET", url);
+        return await apiRequest(url, "GET");
       },
       staleTime: 1000 * 60 * 5, // 5 minutes
       retry: (failureCount, error: any) => {
