@@ -161,6 +161,13 @@ Changelog:
   * Successfully imported all 33 employees from production CSV file
   * Added manager relationship resolution with proper error handling for missing managers
   * Completed comprehensive testing with real user data validation
+- June 20, 2025. Enhanced income CSV import with robust field handling and boolean parsing
+  * Fixed recurring flag logic with case-insensitive boolean parsing (TRUE/true/Yes/1/on)
+  * Added recurring_end_date column display in CSV import preview table
+  * Enhanced preview table to show optional columns (invoice_id, client_id, payment_source_id)
+  * Implemented proper handling of empty optional fields as null values
+  * Updated frontend to display recurring status as "Yes"/"No" for better readability
+  * Applied consistent Card-based UI layout across Income, Expenses, and Employees pages
 ```
 
 ## User Preferences
