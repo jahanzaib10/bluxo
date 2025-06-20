@@ -53,9 +53,9 @@ export default function UserManagement() {
     queryClient.invalidateQueries({ queryKey: ["/api/user-invitations"] });
   }, [queryClient]);
 
-  // Fetch users with aggressive cache busting
+  // Fetch users
   const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
-    queryKey: ["/api/users", Date.now()], // Add timestamp to force fresh requests
+    queryKey: ["/api/users"],
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
