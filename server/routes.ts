@@ -113,8 +113,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Dashboard analytics endpoint (protected)
-  app.get("/api/dashboard/analytics", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+  // Dashboard summary endpoint (protected)
+  app.get("/api/dashboard/summary", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const organizationId = req.user.organizationId;
       
@@ -130,19 +130,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(expenses)
         .where(eq(expenses.organizationId, organizationId));
       
+      // Get recurring income
+      const recurringIncomeResult = await db
+        .select({ total: sum(income.amount) })
+        .from(income)
+        .where(and(eq(income.organizationId, organizationId), eq(income.isRecurring, true)));
+      
+      // Get client subscription costs
+      const clientSubscriptionsResult = await db
+        .select({ total: sum(subscriptions.amount) })
+        .from(subscriptions)
+        .where(and(eq(subscriptions.organizationId, organizationId), eq(subscriptions.subscriptionType, 'client')));
+      
       const totalIncome = parseFloat(incomeResult[0]?.total || "0");
       const totalExpenses = parseFloat(expenseResult[0]?.total || "0");
-      const netIncome = totalIncome - totalExpenses;
+      const recurringRevenue = parseFloat(recurringIncomeResult[0]?.total || "0");
+      const clientSubscriptionCosts = parseFloat(clientSubscriptionsResult[0]?.total || "0");
+      
+      // Net Profit = Income - Expenses - Client Subscriptions
+      const netProfit = totalIncome - totalExpenses - clientSubscriptionCosts;
       
       res.json({
         totalIncome,
-        totalSpending: totalExpenses,
-        netIncome,
-        monthlyNet: netIncome
+        totalExpenses,
+        netProfit,
+        recurringRevenue
       });
     } catch (error) {
-      console.error("Error fetching analytics:", error);
-      res.status(500).json({ message: "Failed to fetch analytics" });
+      console.error("Error fetching dashboard summary:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard summary" });
+    }
+  });
+
+  // Dashboard trends endpoint (protected)
+  app.get("/api/dashboard/trends", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      
+      // Get monthly income trends (last 12 months)
+      const incomeQuery = await db
+        .select()
+        .from(income)
+        .where(eq(income.organizationId, organizationId))
+        .orderBy(desc(income.date));
+      
+      // Get monthly expense trends (last 12 months)
+      const expenseQuery = await db
+        .select()
+        .from(expenses)
+        .where(eq(expenses.organizationId, organizationId))
+        .orderBy(desc(expenses.date));
+      
+      // Group by month
+      const monthlyData = {};
+      
+      incomeQuery.forEach(record => {
+        const month = new Date(record.date).toISOString().slice(0, 7); // YYYY-MM
+        if (!monthlyData[month]) monthlyData[month] = { income: 0, expenses: 0 };
+        monthlyData[month].income += parseFloat(record.amount);
+      });
+      
+      expenseQuery.forEach(record => {
+        const month = new Date(record.date).toISOString().slice(0, 7); // YYYY-MM
+        if (!monthlyData[month]) monthlyData[month] = { income: 0, expenses: 0 };
+        monthlyData[month].expenses += parseFloat(record.amount);
+      });
+      
+      // Convert to array and sort by month
+      const trends = Object.entries(monthlyData)
+        .map(([month, data]) => ({
+          month,
+          income: data.income,
+          expenses: data.expenses
+        }))
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .slice(-12); // Last 12 months
+      
+      res.json(trends);
+    } catch (error) {
+      console.error("Error fetching dashboard trends:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard trends" });
+    }
+  });
+
+  // Dashboard client contribution endpoint (protected)
+  app.get("/api/dashboard/client-contribution", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      
+      // Get income by client with client names
+      const clientIncomeQuery = await db
+        .select({
+          clientId: income.clientId,
+          clientName: clients.name,
+          totalIncome: sum(income.amount)
+        })
+        .from(income)
+        .leftJoin(clients, eq(income.clientId, clients.id))
+        .where(eq(income.organizationId, organizationId))
+        .groupBy(income.clientId, clients.name)
+        .orderBy(desc(sum(income.amount)));
+      
+      // Calculate total income for percentage calculation
+      const totalIncomeResult = await db
+        .select({ total: sum(income.amount) })
+        .from(income)
+        .where(eq(income.organizationId, organizationId));
+      
+      const totalIncome = parseFloat(totalIncomeResult[0]?.total || "0");
+      
+      const clientContributions = clientIncomeQuery.map(client => ({
+        clientId: client.clientId,
+        clientName: client.clientName || 'Unknown Client',
+        totalIncome: parseFloat(client.totalIncome || "0"),
+        percentage: totalIncome > 0 ? (parseFloat(client.totalIncome || "0") / totalIncome * 100) : 0
+      }));
+      
+      res.json(clientContributions);
+    } catch (error) {
+      console.error("Error fetching client contribution:", error);
+      res.status(500).json({ message: "Failed to fetch client contribution" });
+    }
+  });
+
+  // Dashboard expense breakdown endpoint (protected)
+  app.get("/api/dashboard/expense-breakdown", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      
+      // Get expenses by category with category names
+      const categoryExpenseQuery = await db
+        .select({
+          categoryId: expenses.categoryId,
+          categoryName: categories.name,
+          parentName: categories.parentName,
+          totalExpense: sum(expenses.amount)
+        })
+        .from(expenses)
+        .leftJoin(categories, eq(expenses.categoryId, categories.id))
+        .where(eq(expenses.organizationId, organizationId))
+        .groupBy(expenses.categoryId, categories.name, categories.parentName)
+        .orderBy(desc(sum(expenses.amount)));
+      
+      // Group by parent category for rollup
+      const categoryBreakdown = {};
+      categoryExpenseQuery.forEach(expense => {
+        const categoryKey = expense.parentName || expense.categoryName || 'Uncategorized';
+        if (!categoryBreakdown[categoryKey]) {
+          categoryBreakdown[categoryKey] = 0;
+        }
+        categoryBreakdown[categoryKey] += parseFloat(expense.totalExpense || "0");
+      });
+      
+      // Convert to array and get top 5
+      const topCategories = Object.entries(categoryBreakdown)
+        .map(([category, amount]) => ({
+          category,
+          amount: amount as number
+        }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 5);
+      
+      res.json(topCategories);
+    } catch (error) {
+      console.error("Error fetching expense breakdown:", error);
+      res.status(500).json({ message: "Failed to fetch expense breakdown" });
     }
   });
 
