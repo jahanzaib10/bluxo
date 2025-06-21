@@ -171,10 +171,25 @@ export default function Income() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clean up form data before submission
+    const cleanedData = { ...formData };
+    
+    // Handle empty date fields
+    if (!cleanedData.recurringEndDate || cleanedData.recurringEndDate.trim() === '') {
+      cleanedData.recurringEndDate = null;
+    }
+    
+    // If not recurring, clear recurring fields
+    if (!cleanedData.isRecurring) {
+      cleanedData.recurringFrequency = '';
+      cleanedData.recurringEndDate = null;
+    }
+    
     if (editingIncome) {
-      updateMutation.mutate({ id: editingIncome.id, data: formData });
+      updateMutation.mutate({ id: editingIncome.id, data: cleanedData });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(cleanedData);
     }
   };
 
