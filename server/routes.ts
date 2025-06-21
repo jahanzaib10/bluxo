@@ -1414,12 +1414,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clean up empty date fields before validation
       const cleanedData = { ...req.body };
       
-      // Handle all possible empty date field scenarios
+      // Handle all possible empty field scenarios
       ['recurringEndDate', 'date'].forEach(field => {
         if (cleanedData[field] === '' || cleanedData[field] === undefined || cleanedData[field] === 'dd/mm/yyyy') {
           cleanedData[field] = null;
         }
       });
+      
+      // Handle recurring frequency - convert empty string to null
+      if (cleanedData.recurringFrequency === '' || cleanedData.recurringFrequency === undefined) {
+        cleanedData.recurringFrequency = null;
+      }
       
       const validatedData = insertIncomeSchema.partial().parse(cleanedData);
       const updatedIncome = await storage.updateIncome(id, validatedData);

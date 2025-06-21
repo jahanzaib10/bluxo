@@ -182,8 +182,13 @@ export default function Income() {
     
     // If not recurring, clear recurring fields
     if (!cleanedData.isRecurring) {
-      cleanedData.recurringFrequency = '';
+      cleanedData.recurringFrequency = null;
       cleanedData.recurringEndDate = null;
+    }
+    
+    // Handle empty recurring frequency
+    if (cleanedData.recurringFrequency === '' || cleanedData.recurringFrequency === undefined) {
+      cleanedData.recurringFrequency = null;
     }
     
     if (editingIncome) {

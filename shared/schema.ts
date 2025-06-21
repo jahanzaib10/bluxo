@@ -386,7 +386,7 @@ export const insertIncomeSchema = z.object({
   categoryId: z.string().uuid().optional(),
   description: z.string().optional(),
   isRecurring: z.boolean().optional(),
-  recurringFrequency: z.enum(['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly']).optional(),
+  recurringFrequency: z.enum(['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly']).optional().nullable(),
   recurringEndDate: z.string().optional().nullable(),
   status: z.enum(['pending', 'paid', 'failed']).optional(),
   invoiceId: z.string().optional(),
