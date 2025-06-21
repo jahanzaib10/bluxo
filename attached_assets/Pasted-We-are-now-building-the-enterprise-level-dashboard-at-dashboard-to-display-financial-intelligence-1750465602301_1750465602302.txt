@@ -1,0 +1,109 @@
+We are now building the enterprise-level dashboard at `/dashboard` to display financial intelligence and real-time business performance.
+
+This is the most critical visual hub in the app. The dashboard must summarize core financial KPIs and breakdowns for decision-makers.
+
+---
+
+✅ SECTION 1: KPI CARDS (TOP METRICS)
+
+Build 4 responsive cards at the top with:
+
+1. **Total Income**
+2. **Total Expenses**
+3. **Net Income** (income - expenses - client-linked subscriptions)
+4. **Recurring Revenue** (total income where `is_recurring = true`)
+
+Style:
+- Icon per card (💰, 📉, 📊, 🔁)
+- Up/down % from last month (optional for now)
+- Colors (green = income, red = expenses)
+
+---
+
+📈 SECTION 2: INCOME VS EXPENSE TRENDS (CHART)
+
+- Line or area chart comparing monthly `income` vs `expenses`
+- X-Axis: months
+- Y-Axis: amount
+- Tooltip: total per month
+- Legend for both lines
+
+---
+
+📉 SECTION 3: EXPENSE BREAKDOWN BY CATEGORY
+
+- Donut or bar chart
+- Show top 5 expense categories (rolled up by parent)
+- “View All Categories” button → optional redirect
+
+---
+
+💼 SECTION 4: CLIENT REVENUE CONTRIBUTION
+
+- Bar chart or ranked table:
+  - Client name + total income + % of total
+  - Only for `type = income`
+
+---
+
+📊 SECTION 5: SUBSCRIPTION COSTS
+
+- Small table listing top 5 recurring expenses
+- Columns: `name`, `amount`, `billing_cycle`, `next_due`
+- Highlight overdue or upcoming renewals
+
+---
+
+🧠 Net Profit Calculation (Critical Logic)
+
+Net Profit =  
+`SUM(income.amount)`  
+– `SUM(expenses.amount)`  
+– `SUM(subscriptions.amount WHERE subscription_type = 'client')`
+
+✅ Scoped by organization  
+✅ Filterable by date range (default: current month)
+
+---
+
+🎛 FILTERING CONTROLS
+
+Add filters above charts:
+- Date range (month/year or calendar)
+- Category
+- Client
+- Currency (optional)
+- Reset button
+
+---
+
+📘 API + Data:
+
+- Use TanStack Query to fetch metrics
+- API endpoints:
+  - `/api/dashboard/summary`
+  - `/api/dashboard/trends`
+  - `/api/dashboard/client-contribution`
+  - `/api/dashboard/expense-breakdown`
+
+---
+
+🧪 QA TEST CASES
+
+✅ Metrics load with real data  
+✅ Charts render cleanly  
+✅ Net income adjusts based on client subscriptions  
+✅ Filters work and reset cleanly  
+✅ All values scoped to current `organization_id`  
+✅ No access if not authenticated
+
+---
+
+🔁 REGRESSION
+
+- Do not break existing `/income`, `/expenses`, `/clients`
+- Use current layout, theme toggle, responsive breakpoints
+
+---
+
+This dashboard is the most visible value point in the platform — treat it as the financial cockpit of the company.

@@ -46,6 +46,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/logout", logout);
   app.get("/api/auth/user", authenticateToken, getCurrentUser);
   
+  // Profile update endpoint
+  app.put("/api/auth/profile", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const { name, email, phoneNumber, department } = req.body;
+      
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          name: name || null,
+          email: email || null,
+          phoneNumber: phoneNumber || null,
+          department: department || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+  
+  // Organization endpoints
+  app.get("/api/organization", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      
+      // For now, return basic organization info
+      res.json({
+        id: organizationId,
+        name: "Dartnox Technologies",
+        description: "IT Services and Software Development",
+        website: "https://dartnox.com",
+        address: "Pakistan"
+      });
+    } catch (error) {
+      console.error("Error fetching organization:", error);
+      res.status(500).json({ message: "Failed to fetch organization" });
+    }
+  });
+  
+  app.put("/api/organization", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const organizationId = req.user.organizationId;
+      const { name, description, website, address } = req.body;
+      
+      // For now, just return success since we don't have an organizations table
+      res.json({
+        id: organizationId,
+        name: name || "Dartnox Technologies",
+        description: description || "",
+        website: website || "",
+        address: address || ""
+      });
+    } catch (error) {
+      console.error("Error updating organization:", error);
+      res.status(500).json({ message: "Failed to update organization" });
+    }
+  });
+  
   // Dashboard analytics endpoint (protected)
   app.get("/api/dashboard/analytics", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
@@ -1884,6 +1951,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating payment source:", error);
       res.status(500).json({ message: "Failed to create payment source" });
+    }
+  });
+
+  app.delete("/api/payment-sources/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = req.user.organizationId;
+      
+      const [deletedPaymentSource] = await db
+        .delete(paymentSources)
+        .where(and(eq(paymentSources.id, id), eq(paymentSources.organizationId, organizationId)))
+        .returning();
+      
+      if (!deletedPaymentSource) {
+        return res.status(404).json({ message: "Payment source not found" });
+      }
+      
+      res.json({ message: "Payment source deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting payment source:", error);
+      res.status(500).json({ message: "Failed to delete payment source" });
     }
   });
 

@@ -115,6 +115,7 @@ export default function PaymentSourcesSettings() {
         description: "Payment source deleted successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/payment-sources'] });
+      queryClient.refetchQueries({ queryKey: ['/api/payment-sources'] });
     },
     onError: (error: any) => {
       toast({
