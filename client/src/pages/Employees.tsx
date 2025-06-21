@@ -73,11 +73,7 @@ export default function Employees() {
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      await apiRequest("/api/employees", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      return apiRequest("/api/employees", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
@@ -92,11 +88,7 @@ export default function Employees() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
-      await apiRequest(`/api/employees/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      return apiRequest(`/api/employees/${id}`, "PUT", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
@@ -112,9 +104,7 @@ export default function Employees() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest(`/api/employees/${id}`, {
-        method: "DELETE",
-      });
+      return apiRequest(`/api/employees/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
@@ -579,7 +569,16 @@ export default function Employees() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEmployees.map((employee: Employee) => (
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={12} className="text-center py-8">
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mr-3"></div>
+                          Loading employees...
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredEmployees.map((employee: Employee) => (
                     <TableRow key={employee.id}>
                       <TableCell className="font-medium whitespace-nowrap">
                         <div className="flex items-center gap-2">

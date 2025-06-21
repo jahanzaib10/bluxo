@@ -428,8 +428,11 @@ export default function EmployeeExpenses() {
                   <TableBody>
                     {expensesLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">
-                          Loading expenses...
+                        <TableCell colSpan={6} className="text-center py-8">
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mr-3"></div>
+                            Loading employee expenses...
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
