@@ -55,29 +55,18 @@ export default function Dashboard() {
     queryKey: ['/api/clients'],
   });
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
+  // Data processing with proper type handling
+  const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+  
+  const hierarchicalCategories = Array.isArray(categories) ? (categories as any[])?.map(cat => ({
+    ...cat,
+    displayName: cat.parentName ? `${cat.parentName} → ${cat.name}` : cat.name
+  })) : [];
 
-  // Format chart data for trends
-  const chartData = trends?.map(trend => ({
-    month: new Date(trend.month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-    income: trend.income,
-    expenses: trend.expenses
-  })) || [];
-
-  // Pie chart colors
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1'];
-
-  // Get top 5 subscriptions for subscription costs section
-  const topSubscriptions = (Array.isArray(subscriptions) ? subscriptions : [])
-    .filter(sub => sub.subscriptionType === 'self')
+  const topSubscriptions = Array.isArray(subscriptions) ? (subscriptions as any[])
+    ?.filter(sub => sub.subscriptionType === 'self')
     .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
-    .slice(0, 5);
+    .slice(0, 5) : [];
 
   // Reset filters
   const resetFilters = () => {
@@ -86,311 +75,318 @@ export default function Dashboard() {
     setSelectedClient('all');
   };
 
-  if (summaryLoading) {
+  // Loading state
+  if (summaryLoading || trendsLoading || clientLoading || expenseLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Financial Dashboard</h1>
-          <p className="text-gray-600">Real-time business performance and financial intelligence</p>
-        </div>
-        <Button 
-          variant="outline" 
-          onClick={() => window.location.reload()}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Date Range</label>
-              <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1W">1 Week</SelectItem>
-                  <SelectItem value="1M">1 Month</SelectItem>
-                  <SelectItem value="3M">3 Months</SelectItem>
-                  <SelectItem value="6M">6 Months</SelectItem>
-                  <SelectItem value="1Y">1 Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Category</label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {(Array.isArray(categories) ? categories : []).map(category => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.parentName ? `${category.parentName} → ${category.name}` : category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Client</label>
-              <Select value={selectedClient} onValueChange={setSelectedClient}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Clients</SelectItem>
-                  {(Array.isArray(clients) ? clients : []).map(client => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end">
-              <Button variant="outline" onClick={resetFilters} className="flex items-center gap-2">
-                <RotateCcw className="h-4 w-4" />
-                Reset
-              </Button>
-            </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your business today.</p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summary?.totalIncome || 0)}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Calendar className="w-4 h-4" />
+              Updated {new Date().toLocaleDateString()}
             </div>
-            <p className="text-xs text-muted-foreground">Revenue generated</p>
-          </CardContent>
-        </Card>
+            <Button onClick={resetFilters} variant="outline" className="flex items-center gap-2">
+              <RotateCcw className="w-4 h-4" />
+              Reset
+            </Button>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(summary?.totalExpenses || 0)}
-            </div>
-            <p className="text-xs text-muted-foreground">Operating costs</p>
-          </CardContent>
-        </Card>
+        {/* Time Range Selector */}
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-gray-700">Time Range:</span>
+          <div className="flex gap-2">
+            {['1W', '1M', '3M', '6M', '1Y'].map((period) => (
+              <Button
+                key={period}
+                variant={timeRange === period ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTimeRange(period)}
+                className={timeRange === period ? "bg-purple-600 hover:bg-purple-700" : ""}
+              >
+                {period}
+              </Button>
+            ))}
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${(summary?.netProfit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(summary?.netProfit || 0)}
-            </div>
-            <p className="text-xs text-muted-foreground">Income - Expenses - Client Subscriptions</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recurring Revenue</CardTitle>
-            <RotateCcw className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {formatCurrency(summary?.recurringRevenue || 0)}
-            </div>
-            <p className="text-xs text-muted-foreground">Recurring income streams</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Income vs Expense Trends */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Income vs Expense Trends
-            </CardTitle>
-            <CardDescription>Monthly comparison over the last 12 months</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {trendsLoading ? (
-              <div className="h-64 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Income */}
+          <Card className="relative overflow-hidden border-0 shadow-lg">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-green-600"></div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Income</CardTitle>
+              <div className="p-2 bg-green-100 rounded-lg">
+                <ArrowUpRight className="h-5 w-5 text-green-600" />
               </div>
-            ) : (
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-gray-900">
+                ${((summary as any)?.totalIncome || 0).toLocaleString()}
+              </div>
+              <p className="text-sm text-green-600 mt-2 flex items-center">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                +12% from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Total Expenses */}
+          <Card className="relative overflow-hidden border-0 shadow-lg">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-400 to-red-600"></div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Expenses</CardTitle>
+              <div className="p-2 bg-red-100 rounded-lg">
+                <ArrowDownRight className="h-5 w-5 text-red-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-gray-900">
+                ${((summary as any)?.totalExpenses || 0).toLocaleString()}
+              </div>
+              <p className="text-sm text-green-600 mt-2 flex items-center">
+                <TrendingDown className="w-4 h-4 mr-1" />
+                -8% from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Net Profit */}
+          <Card className="relative overflow-hidden border-0 shadow-lg">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Net Profit</CardTitle>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <DollarSign className="h-5 w-5 text-blue-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-3xl font-bold ${((summary as any)?.netProfit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                ${((summary as any)?.netProfit || 0).toLocaleString()}
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                Revenue minus all expenses
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Recurring Revenue */}
+          <Card className="relative overflow-hidden border-0 shadow-lg">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-purple-600"></div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Recurring Revenue</CardTitle>
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <RotateCcw className="h-5 w-5 text-purple-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-gray-900">
+                ${((summary as any)?.recurringRevenue || 0).toLocaleString()}
+              </div>
+              <p className="text-sm text-purple-600 mt-2 flex items-center">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                Monthly subscription income
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Income vs Expenses Trends */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-purple-600" />
+                Income vs Expenses Trend
+              </CardTitle>
+              <CardDescription>
+                Monthly comparison of income and expenses
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                  <Legend />
-                  <Line 
+                <AreaChart data={trends as any[] || []}>
+                  <defs>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#6b7280"
+                    fontSize={12}
+                  />
+                  <YAxis 
+                    stroke="#6b7280"
+                    fontSize={12}
+                    tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [`$${Number(value).toLocaleString()}`, '']}
+                    labelStyle={{ color: '#374151' }}
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                  />
+                  <Area 
                     type="monotone" 
                     dataKey="income" 
-                    stroke="#22c55e" 
+                    stroke="#10b981" 
+                    fillOpacity={1} 
+                    fill="url(#colorIncome)"
                     strokeWidth={2}
                     name="Income"
                   />
-                  <Line 
+                  <Area 
                     type="monotone" 
                     dataKey="expenses" 
                     stroke="#ef4444" 
+                    fillOpacity={1} 
+                    fill="url(#colorExpenses)"
                     strokeWidth={2}
                     name="Expenses"
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Expense Breakdown by Category */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieChartIcon className="h-5 w-5" />
-              Expense Breakdown by Category
-            </CardTitle>
-            <CardDescription>Top 5 expense categories</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {expenseLoading ? (
-              <div className="h-64 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-              </div>
-            ) : (
+          {/* Expense Breakdown */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChartIcon className="h-5 w-5 text-purple-600" />
+                Expense Breakdown
+              </CardTitle>
+              <CardDescription>
+                Top expense categories this month
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={expenseBreakdown}
-                    dataKey="amount"
-                    nameKey="category"
+                    data={expenseBreakdown as any[] || []}
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
-                    label={({ category, amount }) => `${category}: ${formatCurrency(amount)}`}
+                    innerRadius={60}
+                    outerRadius={120}
+                    paddingAngle={5}
+                    dataKey="amount"
                   >
-                    {expenseBreakdown?.map((entry, index) => (
+                    {(expenseBreakdown as any[] || []).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                  <Tooltip 
+                    formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Amount']}
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                  />
+                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Client Revenue Contribution */}
-        <Card>
+        <Card className="border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+              <Users className="h-5 w-5 text-purple-600" />
               Client Revenue Contribution
             </CardTitle>
-            <CardDescription>Revenue breakdown by client</CardDescription>
+            <CardDescription>
+              Revenue breakdown by client for current period
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {clientLoading ? (
-              <div className="h-64 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {(clientContribution || []).slice(0, 5).map((client, index) => (
-                  <div key={client.clientId} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <span className="font-medium">{client.clientName}</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold">{formatCurrency(client.totalIncome)}</div>
-                      <div className="text-sm text-muted-foreground">{client.percentage.toFixed(1)}%</div>
-                    </div>
+            <div className="space-y-4">
+              {(clientContribution as any[] || []).slice(0, 5).map((client, index) => (
+                <div key={client.clientId} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                    <span className="font-medium text-gray-900">{client.clientName}</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="text-right">
+                    <div className="font-semibold text-gray-900">${Number(client.totalRevenue).toLocaleString()}</div>
+                    <div className="text-sm text-gray-500">{client.percentage}%</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Subscription Costs */}
-        <Card>
+        {/* Subscription Costs Table */}
+        <Card className="border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Subscription Costs
+              <RotateCcw className="h-5 w-5 text-purple-600" />
+              Top Subscription Costs
             </CardTitle>
-            <CardDescription>Top recurring expenses</CardDescription>
+            <CardDescription>
+              Highest recurring internal expenses
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Cycle</TableHead>
-                  <TableHead>Next Due</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {topSubscriptions.map((subscription) => (
-                  <TableRow key={subscription.id}>
-                    <TableCell className="font-medium">{subscription.name}</TableCell>
-                    <TableCell>{formatCurrency(parseFloat(subscription.amount))}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{subscription.billingCycle}</Badge>
-                    </TableCell>
-                    <TableCell>{subscription.nextDueDate || 'Not set'}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="font-semibold">Service</TableHead>
+                    <TableHead className="font-semibold">Amount</TableHead>
+                    <TableHead className="font-semibold">Billing Cycle</TableHead>
+                    <TableHead className="font-semibold">Category</TableHead>
+                    <TableHead className="font-semibold">Next Billing</TableHead>
                   </TableRow>
-                ))}
-                {topSubscriptions.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
-                      No subscription data available
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {topSubscriptions.length > 0 ? (
+                    topSubscriptions.map((subscription) => (
+                      <TableRow key={subscription.id} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">{subscription.name}</TableCell>
+                        <TableCell className="font-semibold text-gray-900">${Number(subscription.amount).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {subscription.billingCycle}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-gray-600">{subscription.categoryName || 'N/A'}</TableCell>
+                        <TableCell className="text-gray-600">
+                          {subscription.nextBillingDate ? new Date(subscription.nextBillingDate).toLocaleDateString() : 'N/A'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                        No subscription data available
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
