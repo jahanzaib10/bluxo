@@ -365,7 +365,7 @@ export default function EmployeeExpenses() {
             <DialogHeader>
               <DialogTitle>Add Expense for {employee.name}</DialogTitle>
             </DialogHeader>
-            <FormComponent />
+            {renderForm()}
           </DialogContent>
         </Dialog>
       </div>
@@ -508,7 +508,7 @@ export default function EmployeeExpenses() {
           <DialogHeader>
             <DialogTitle>Edit Expense for {employee.name}</DialogTitle>
           </DialogHeader>
-          <FormComponent />
+          {renderForm()}
         </DialogContent>
       </Dialog>
     </div>
