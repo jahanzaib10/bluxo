@@ -260,7 +260,8 @@ export default function Subscriptions() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
             </div>
           ) : (
-            <Table>
+            <div className="border rounded-lg overflow-auto max-h-96">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -277,27 +278,27 @@ export default function Subscriptions() {
               <TableBody>
                 {subscriptions.map((subscription: any) => (
                   <TableRow key={subscription.id}>
-                    <TableCell className="font-medium">{subscription.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{subscription.name}</TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge className={getTypeBadge(subscription.subscriptionType)}>
                         {subscription.subscriptionType === 'client' ? 'Client' : 'Internal'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatAmount(subscription.amount)}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">{formatAmount(subscription.amount)}</TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge className={getBillingCycleBadge(subscription.billingCycle)}>
                         {subscription.billingCycle}
                       </Badge>
                     </TableCell>
-                    <TableCell>{subscription.clientName || '-'}</TableCell>
-                    <TableCell>{subscription.categoryName || '-'}</TableCell>
-                    <TableCell>{subscription.nextDueDate || '-'}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">{subscription.clientName || '-'}</TableCell>
+                    <TableCell className="whitespace-nowrap">{subscription.categoryName || '-'}</TableCell>
+                    <TableCell className="whitespace-nowrap">{subscription.nextDueDate || '-'}</TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge variant={subscription.reconciled ? "default" : "secondary"}>
                         {subscription.reconciled ? "Reconciled" : "Pending"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <div className="flex space-x-2">
                         <Button
                           variant="ghost"
@@ -319,6 +320,7 @@ export default function Subscriptions() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

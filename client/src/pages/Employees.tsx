@@ -550,7 +550,7 @@ export default function Employees() {
         </CardHeader>
         <CardContent>
           {filteredEmployees.length > 0 ? (
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-auto max-h-96">
               <Table>
                 <TableHeader>
                   <TableRow>
