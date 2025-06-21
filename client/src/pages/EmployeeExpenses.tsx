@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Plus, Edit, Trash2, DollarSign, Calendar, Repeat } from "lucide-react";
@@ -186,120 +186,121 @@ export default function EmployeeExpenses() {
     return `${month} ${day}, ${year}`;
   };
 
-  // Form Component
-  const FormComponent = () => (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="amount">Amount ($)</Label>
-          <Input
-            id="amount"
-            type="number"
-            step="0.01"
-            value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="date">Date</Label>
-          <Input
-            id="date"
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            required
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="categoryId">Category</Label>
-        <CategorySelect
-          value={formData.categoryId}
-          onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-          type="expense"
-          placeholder="Select expense category"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          rows={3}
-        />
-      </div>
-
-      {/* Recurring Expense Fields */}
-      <div className="space-y-4 border-t pt-4">
-        <div className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            id="isRecurring"
-            checked={formData.isRecurring}
-            onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
-            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-          />
-          <Label htmlFor="isRecurring" className="text-sm font-medium">
-            This is a recurring expense
-          </Label>
-        </div>
-
-        {formData.isRecurring && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="recurringFrequency">Frequency</Label>
-              <Select
-                value={formData.recurringFrequency}
-                onValueChange={(value) => setFormData({ ...formData, recurringFrequency: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="quarterly">Quarterly</SelectItem>
-                  <SelectItem value="bi-annual">Bi-Annual</SelectItem>
-                  <SelectItem value="yearly">Yearly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="recurringEndDate">End Date (Optional)</Label>
-              <Input
-                id="recurringEndDate"
-                type="date"
-                value={formData.recurringEndDate}
-                onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
-              />
-            </div>
+  // Form component to prevent input field focus issues
+  const renderForm = () => {
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="amount">Amount ($)</Label>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              value={formData.amount}
+              onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+              required
+            />
           </div>
-        )}
-      </div>
+          <div>
+            <Label htmlFor="date">Date</Label>
+            <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+              required
+            />
+          </div>
+        </div>
 
-      <div className="flex justify-end space-x-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            setIsAddOpen(false);
-            setIsEditOpen(false);
-            setEditingExpense(null);
-            resetForm();
-          }}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-          {editingExpense ? "Update" : "Create"} Expense
-        </Button>
-      </div>
-    </form>
-  );
+        <div>
+          <Label htmlFor="categoryId">Category</Label>
+          <CategorySelect
+            value={formData.categoryId}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
+            type="expense"
+            placeholder="Select expense category"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-4 border-t pt-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isRecurring"
+              checked={formData.isRecurring}
+              onChange={(e) => setFormData(prev => ({ ...prev, isRecurring: e.target.checked }))}
+              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+            />
+            <Label htmlFor="isRecurring" className="text-sm font-medium">
+              This is a recurring expense
+            </Label>
+          </div>
+
+          {formData.isRecurring && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="recurringFrequency">Frequency</Label>
+                <Select
+                  value={formData.recurringFrequency}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, recurringFrequency: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="bi-annual">Bi-Annual</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="recurringEndDate">End Date (Optional)</Label>
+                <Input
+                  id="recurringEndDate"
+                  type="date"
+                  value={formData.recurringEndDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, recurringEndDate: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end space-x-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setIsAddOpen(false);
+              setIsEditOpen(false);
+              setEditingExpense(null);
+              resetForm();
+            }}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+            {editingExpense ? "Update" : "Create"} Expense
+          </Button>
+        </div>
+      </form>
+    );
+  };
 
   if (employeeLoading) {
     return (
