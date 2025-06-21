@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -16,12 +15,14 @@ import {
   Users,
   Filter,
   RefreshCw,
-  PieChart as PieChartIcon,
-  BarChart3
+  ArrowUpRight,
+  ArrowDownRight,
+  BarChart3,
+  PieChart as PieChartIcon
 } from 'lucide-react';
 
 export default function Dashboard() {
-  const [dateRange, setDateRange] = useState('current-month');
+  const [timeRange, setTimeRange] = useState('1M');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedClient, setSelectedClient] = useState('all');
 
@@ -80,7 +81,7 @@ export default function Dashboard() {
 
   // Reset filters
   const resetFilters = () => {
-    setDateRange('current-month');
+    setTimeRange('1M');
     setSelectedCategory('all');
     setSelectedClient('all');
   };
@@ -123,15 +124,16 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Date Range</label>
-              <Select value={dateRange} onValueChange={setDateRange}>
+              <Select value={timeRange} onValueChange={setTimeRange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="current-month">Current Month</SelectItem>
-                  <SelectItem value="last-month">Last Month</SelectItem>
-                  <SelectItem value="quarter">This Quarter</SelectItem>
-                  <SelectItem value="year">This Year</SelectItem>
+                  <SelectItem value="1W">1 Week</SelectItem>
+                  <SelectItem value="1M">1 Month</SelectItem>
+                  <SelectItem value="3M">3 Months</SelectItem>
+                  <SelectItem value="6M">6 Months</SelectItem>
+                  <SelectItem value="1Y">1 Year</SelectItem>
                 </SelectContent>
               </Select>
             </div>

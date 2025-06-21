@@ -1,0 +1,109 @@
+Phase 4: Enterprise Dashboard with Modern Design
+🎯 Goal & Context
+We are building the main finance intelligence dashboard at /dashboard, used by founders and CFOs to track real-time performance across income, expenses, net profit, and subscriptions.
+
+All financial data (income, expenses, recurring, categories, clients) is already linked and scoped to each organization.
+
+We want this dashboard to:
+
+Be highly visual and modern
+
+Prioritize clarity, performance, and business utility
+
+Look like a polished, investor-ready dashboard
+
+🎨 📸 Design Reference
+Use the design styling shown in the uploaded screenshot.
+
+✅ Do:
+
+Copy design layout, graph colors, gradients, white spacing
+
+Match card components (rounded, shadows, clean)
+
+Use minimal typography + subtle charts
+
+Use donut charts, soft gauges, stacked line charts
+
+❌ Do NOT:
+
+Copy exact numbers, text, or card titles from screenshot
+
+Change our app's financial logic
+
+✅ What to Build (Reinforced)
+Top KPI Cards:
+
+Total Income
+
+Total Expenses
+
+Net Income (income - expenses - client subscriptions)
+
+Recurring Revenue
+
+Income vs Expenses Trend Chart
+
+Style: smooth line/area
+
+Colors: Green (income), Red/Orange (expenses)
+
+Time range switcher (Week, Month, YTD)
+
+Category Breakdown (Donut or Gauge)
+
+Top 5 expense categories grouped by parent
+
+Client Revenue Contribution
+
+Bar chart showing client vs total revenue
+
+Sortable list of top clients
+
+Recurring Costs Summary
+
+Small card showing recurring tool costs
+
+Show next due dates (like Stripe Billing style)
+
+Optional: Savings or Forecast Progress Bar
+
+Progress toward profitability or quarterly goal
+
+🎛 Filters (Top Controls)
+Date range selector (month/year or calendar)
+
+Client dropdown
+
+Category
+
+Reset button
+
+📘 API & Backend
+Use:
+
+GET /api/dashboard/summary
+
+GET /api/dashboard/trends
+
+GET /api/dashboard/expense-breakdown
+
+GET /api/dashboard/client-contribution
+
+All results scoped to organization_id.
+
+🧪 QA Test Scenarios
+✅ All charts load real org data
+✅ Filters adjust results in all cards
+✅ Net income reflects expenses and client-subscription costs
+✅ Empty state handled when data is missing
+✅ Light/dark mode preserved
+✅ Mobile-responsive layout works cleanly
+
+🔁 Regression Rules
+
+Do not affect /income, /expenses, /subscriptions etc.
+
+Do not touch login/session/auth logic etc. 
+
+Use existing layout wrapper and theme toggler

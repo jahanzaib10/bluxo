@@ -258,28 +258,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const organizationId = req.user.organizationId;
       
-      // Get expenses by category with category names
-      const categoryExpenseQuery = await db
-        .select({
-          categoryId: expenses.categoryId,
-          categoryName: categories.name,
-          parentName: categories.parentName,
-          totalExpense: sum(expenses.amount)
-        })
+      // Get all expenses for this organization
+      const expenseResults = await db
+        .select()
         .from(expenses)
-        .leftJoin(categories, eq(expenses.categoryId, categories.id))
-        .where(eq(expenses.organizationId, organizationId))
-        .groupBy(expenses.categoryId, categories.name, categories.parentName)
-        .orderBy(desc(sum(expenses.amount)));
+        .where(eq(expenses.organizationId, organizationId));
+      
+      // Get all categories for name lookup
+      const allCategories = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.organizationId, organizationId));
+      
+      // Create category lookup map
+      const categoryMap = {};
+      allCategories.forEach(cat => {
+        categoryMap[cat.id] = cat;
+      });
       
       // Group by parent category for rollup
       const categoryBreakdown = {};
-      categoryExpenseQuery.forEach(expense => {
-        const categoryKey = expense.parentName || expense.categoryName || 'Uncategorized';
+      expenseResults.forEach(expense => {
+        const category = categoryMap[expense.categoryId];
+        const categoryKey = category?.parentName || category?.name || 'Uncategorized';
         if (!categoryBreakdown[categoryKey]) {
           categoryBreakdown[categoryKey] = 0;
         }
-        categoryBreakdown[categoryKey] += parseFloat(expense.totalExpense || "0");
+        categoryBreakdown[categoryKey] += parseFloat(expense.amount || "0");
       });
       
       // Convert to array and get top 5
