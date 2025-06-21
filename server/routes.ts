@@ -1410,7 +1410,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/income/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
-      const validatedData = insertIncomeSchema.partial().parse(req.body);
+      
+      // Clean up empty date fields before validation
+      const cleanedData = { ...req.body };
+      if (cleanedData.recurringEndDate === '') {
+        cleanedData.recurringEndDate = null;
+      }
+      if (cleanedData.date === '') {
+        cleanedData.date = null;
+      }
+      
+      const validatedData = insertIncomeSchema.partial().parse(cleanedData);
       const updatedIncome = await storage.updateIncome(id, validatedData);
       if (!updatedIncome) {
         return res.status(404).json({ message: "Income not found" });
@@ -1746,7 +1756,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/expenses/:id", authenticateToken, requireSameOrganization, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
-      const validatedData = insertExpenseSchema.partial().parse(req.body);
+      
+      // Clean up empty date fields before validation
+      const cleanedData = { ...req.body };
+      if (cleanedData.recurringEndDate === '') {
+        cleanedData.recurringEndDate = null;
+      }
+      if (cleanedData.date === '') {
+        cleanedData.date = null;
+      }
+      
+      const validatedData = insertExpenseSchema.partial().parse(cleanedData);
       const updatedExpense = await storage.updateExpense(id, validatedData);
       if (!updatedExpense) {
         return res.status(404).json({ message: "Expense not found" });

@@ -246,6 +246,12 @@ Changelog:
   * Added navigation from employees table with clickable employee names and dollar sign icons
   * Created full CRUD functionality for employee-specific expense management with recurring expense support
   * Updated Income endpoints to properly display client names and hierarchical category formatting
+- June 21, 2025. Enhanced table loading states and fixed income record edit errors
+  * Added professional loading spinners to Expenses, Income, and Employees table pages
+  * Fixed income record update errors by properly handling empty date fields in backend
+  * Enhanced expense record update endpoint with same date field validation improvements
+  * Added purple spinner animations with proper centering and messaging across all table views
+  * Resolved PostgreSQL validation errors caused by empty string date fields being sent to database
 ```
 
 ## User Preferences
