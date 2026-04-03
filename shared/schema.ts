@@ -105,8 +105,31 @@ export const people = pgTable("people", {
   paymentAmount: decimal("payment_amount", { precision: 12, scale: 2 }),
   directManagerId: uuid("direct_manager_id").references((): any => people.id),
   groupName: varchar("group_name"),
+
+  // Personal info (missing)
+  dateOfBirth: date("date_of_birth"),
+  nationality: varchar("nationality"),
+  address: text("address"),
+
+  // Employee-specific (null for contractors)
+  employmentType: varchar("employment_type", { enum: ["full_time", "part_time"] }),
+  salary: decimal("salary", { precision: 12, scale: 2 }),
+  salaryFrequency: varchar("salary_frequency", { enum: ["monthly", "bi_weekly", "weekly", "annually"] }),
+  salaryCurrency: varchar("salary_currency", { length: 3 }),
+
+  // Contractor-specific (null for employees)
+  hourlyRate: decimal("hourly_rate", { precision: 12, scale: 2 }),
+  contractRate: decimal("contract_rate", { precision: 12, scale: 2 }),
+  rateCurrency: varchar("rate_currency", { length: 3 }),
+  contractStartDate: date("contract_start_date"),
+  contractEndDate: date("contract_end_date"),
+
+  // Shared
+  paymentSourceId: uuid("payment_source_id"),
+
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const categories = pgTable("categories", {
@@ -369,7 +392,23 @@ export const insertPersonSchema = z.object({
   department: z.string().optional(),
   country: z.string().optional(),
   startDate: z.string().optional(),
+  endDate: z.string().optional().nullable(),
   seniorityLevel: z.string().optional(),
+  dateOfBirth: z.string().optional().nullable(),
+  nationality: z.string().optional(),
+  address: z.string().optional(),
+  employmentType: z.enum(["full_time", "part_time"]).optional().nullable(),
+  salary: z.string().optional().nullable(),
+  salaryFrequency: z.enum(["monthly", "bi_weekly", "weekly", "annually"]).optional().nullable(),
+  salaryCurrency: z.string().max(3).optional().nullable(),
+  hourlyRate: z.string().optional().nullable(),
+  contractRate: z.string().optional().nullable(),
+  rateCurrency: z.string().max(3).optional().nullable(),
+  contractStartDate: z.string().optional().nullable(),
+  contractEndDate: z.string().optional().nullable(),
+  paymentSourceId: z.string().uuid().optional().nullable(),
+  directManagerId: z.string().uuid().optional().nullable(),
+  groupName: z.string().optional(),
 });
 
 export const insertCategorySchema = z.object({
