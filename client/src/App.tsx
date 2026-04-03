@@ -1,34 +1,85 @@
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Switch, Route, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Router, Route, Switch } from "wouter";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { queryClient } from "./lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
+import { Toaster } from "./components/ui/sonner";
+import { ThemeProvider } from "./components/theme/ThemeProvider";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { SignIn, SignUp } from "@clerk/clerk-react";
+import { useActiveOrg } from "./hooks/useActiveOrg";
 
-// Import layout component
+// Layout
 import DashboardLayout from "./components/layout/DashboardLayout";
 
-// Import new simplified pages
+// Pages
 import Dashboard from "./pages/Dashboard";
 import Income from "./pages/Income";
 import Expenses from "./pages/Expenses";
 import Subscriptions from "./pages/Subscriptions";
-import Clients from "./pages/Clients";
-import Employees from "./pages/Employees";
-import EmployeeExpenses from "./pages/EmployeeExpenses";
-import Settings from "./pages/Settings";
-import Categories from "./pages/settings/Categories";
-import PaymentSources from "./pages/settings/PaymentSources";
-import UserManagement from "./pages/settings/UserManagement";
-import ClientDashboard from "./pages/ClientDashboard";
-import ClientPortal from "./pages/ClientPortal";
-import AcceptInvitation from "./pages/AcceptInvitation";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 
-function AuthenticatedApp() {
+// Pages — note lowercase filenames on disk
+import Clients from "./pages/clients";
+import Employees from "./pages/employees";
+import EmployeeExpenses from "./pages/EmployeeExpenses";
+
+// Settings pages
+import ProfileSettings from "./pages/settings/ProfileSettings";
+import SecuritySettings from "./pages/settings/SecuritySettings";
+import OrganizationSettings from "./pages/settings/OrganizationSettings";
+import CategoriesSettings from "./pages/settings/CategoriesSettings";
+import PaymentSourcesSettings from "./pages/settings/PaymentSourcesSettings";
+import { UserManagementSettings } from "./pages/settings/UserManagementSettings";
+
+function CommandCenter() {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">HQ Command Center</h1>
+      <p className="text-muted-foreground mt-2">Coming in a future update.</p>
+    </div>
+  );
+}
+
+function OrgRouter() {
+  const { activeOrg, isLoaded, hasMultipleOrgs } = useActiveOrg();
+
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!activeOrg) {
+    if (hasMultipleOrgs) {
+      return (
+        <DashboardLayout>
+          <Switch>
+            <Route path="/hq" component={CommandCenter} />
+            <Route path="/hq/organizations">
+              <div className="p-6">
+                <h1 className="text-2xl font-bold">Organizations</h1>
+              </div>
+            </Route>
+            <Route>
+              <Redirect to="/hq" />
+            </Route>
+          </Switch>
+        </DashboardLayout>
+      );
+    }
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Welcome to Bluxo</h1>
+          <p className="text-muted-foreground">
+            Create or join an organization to get started.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DashboardLayout>
       <Switch>
@@ -37,62 +88,46 @@ function AuthenticatedApp() {
         <Route path="/income" component={Income} />
         <Route path="/expenses" component={Expenses} />
         <Route path="/subscriptions" component={Subscriptions} />
+        <Route path="/clients" component={Clients} />
         <Route path="/employees" component={Employees} />
         <Route path="/employees/:employeeId/expenses" component={EmployeeExpenses} />
-        <Route path="/clients" component={Clients} />
-        <Route path="/settings" component={Settings} />
-        <Route path="/settings/profile" component={() => <Settings defaultTab="profile" />} />
-        <Route path="/settings/security" component={() => <Settings defaultTab="security" />} />
-        <Route path="/settings/organization" component={() => <Settings defaultTab="organization" />} />
-        <Route path="/settings/categories" component={() => <Settings defaultTab="categories" />} />
-        <Route path="/settings/payment-sources" component={() => <Settings defaultTab="payment-sources" />} />
-        <Route path="/settings/user-management" component={() => <Settings defaultTab="user-management" />} />
-        <Route path="/client-portal" component={ClientPortal} />
-        <Route path="/client-dashboard" component={ClientDashboard} />
+        <Route path="/settings/profile" component={ProfileSettings} />
+        <Route path="/settings/security" component={SecuritySettings} />
+        <Route path="/settings/organization" component={OrganizationSettings} />
+        <Route path="/settings/categories" component={CategoriesSettings} />
+        <Route path="/settings/payment-sources" component={PaymentSourcesSettings} />
+        <Route path="/settings/user-management" component={UserManagementSettings} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>
   );
 }
 
-function UnauthenticatedApp() {
+function App() {
   return (
-    <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/signup" component={Signup} />
-      <Route path="/accept-invitation/:token" component={AcceptInvitation} />
-      <Route>
-        {() => <Login />}
-      </Route>
-    </Switch>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="system" storageKey="bluxo-theme">
+        <Switch>
+          <Route path="/sign-in">
+            <div className="flex items-center justify-center min-h-screen bg-background">
+              <SignIn routing="hash" />
+            </div>
+          </Route>
+          <Route path="/sign-up">
+            <div className="flex items-center justify-center min-h-screen bg-background">
+              <SignUp routing="hash" />
+            </div>
+          </Route>
+          <Route>
+            <ProtectedRoute>
+              <OrgRouter />
+            </ProtectedRoute>
+          </Route>
+        </Switch>
+        <Toaster />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
-
-function AppRouter() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
-      </div>
-    );
-  }
-
-  return isAuthenticated ? <AuthenticatedApp /> : <UnauthenticatedApp />;
-}
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <ThemeProvider defaultTheme="light" storageKey="finance-saas-theme">
-        <Router>
-          <Toaster />
-          <AppRouter />
-        </Router>
-      </ThemeProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
 
 export default App;

@@ -1,33 +1,24 @@
+import { useAuth } from "@clerk/clerk-react";
+import { SignIn } from "@clerk/clerk-react";
+import { ReactNode } from "react";
 
-import React, { useEffect } from 'react';
-import { useAuth } from './AuthProvider';
-import { useNavigate } from 'react-router-dom';
+export function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { isLoaded, isSignedIn } = useAuth();
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
-
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      console.log('User not authenticated, redirecting to login');
-      navigate('/', { replace: true });
-    }
-  }, [user, loading, navigate]);
-
-  if (loading) {
+  if (!isLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
-  if (!user) {
-    return null; // Will redirect via useEffect
+  if (!isSignedIn) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <SignIn routing="hash" />
+      </div>
+    );
   }
 
   return <>{children}</>;
