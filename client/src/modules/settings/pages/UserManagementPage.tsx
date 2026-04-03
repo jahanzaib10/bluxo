@@ -55,6 +55,7 @@ type OrgUser = {
   imageUrl: string | null;
   roleId: number | null;
   roleName: string | null;
+  isOwner: boolean;
   status: string;
 };
 
@@ -201,30 +202,34 @@ function UsersTab() {
                       {user.email}
                     </TableCell>
                     <TableCell>
-                      <Select
-                        value={user.roleId?.toString() ?? "none"}
-                        onValueChange={(value) => {
-                          assignRoleMutation.mutate({
-                            clerkUserId: user.clerkUserId,
-                            roleId: value === "none" ? null : parseInt(value),
-                          });
-                        }}
-                      >
-                        <SelectTrigger className="w-[160px]">
-                          <SelectValue placeholder="Assign role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No role</SelectItem>
-                          {roles.map((role) => (
-                            <SelectItem
-                              key={role.id}
-                              value={role.id.toString()}
-                            >
-                              {role.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {user.isOwner ? (
+                        <Badge variant="default">Owner</Badge>
+                      ) : (
+                        <Select
+                          value={user.roleId?.toString() ?? "none"}
+                          onValueChange={(value) => {
+                            assignRoleMutation.mutate({
+                              clerkUserId: user.clerkUserId,
+                              roleId: value === "none" ? null : parseInt(value),
+                            });
+                          }}
+                        >
+                          <SelectTrigger className="w-[160px]">
+                            <SelectValue placeholder="Assign role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No role</SelectItem>
+                            {roles.map((role) => (
+                              <SelectItem
+                                key={role.id}
+                                value={role.id.toString()}
+                              >
+                                {role.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -438,14 +443,15 @@ type PermissionState = Record<
 function PermissionEditor({ role, open, onOpenChange }: PermissionEditorProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
 
-  // Build initial permission state from the role's permissions
-  const buildInitialState = (): PermissionState => {
+  // Build permission state from a permissions array
+  const buildStateFromPermissions = (perms: RolePermission[]): PermissionState => {
     const state: PermissionState = {};
     const allModules = Object.values(MODULES);
 
     for (const mod of allModules) {
-      const existing = role.permissions?.find((p) => p.module === mod);
+      const existing = perms.find((p) => p.module === mod);
       if (existing) {
         state[mod] = {
           enabled: true,
@@ -458,17 +464,38 @@ function PermissionEditor({ role, open, onOpenChange }: PermissionEditorProps) {
     return state;
   };
 
-  const [permissions, setPermissions] = useState<PermissionState>(
-    buildInitialState
-  );
+  const buildEmptyState = (): PermissionState => {
+    const state: PermissionState = {};
+    for (const mod of Object.values(MODULES)) {
+      state[mod] = { enabled: false, accessLevel: "full" };
+    }
+    return state;
+  };
 
-  // Reset when role changes or dialog opens
+  const [permissions, setPermissions] = useState<PermissionState>(buildEmptyState);
+
+  // Fetch the role's permissions from the API when the dialog opens
   React.useEffect(() => {
-    if (open) {
-      setPermissions(buildInitialState());
+    if (open && role?.id) {
+      setPermissionsLoading(true);
+      fetch(`/api/roles/${role.id}`, { credentials: "include" })
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch role");
+          return res.json();
+        })
+        .then((data: Role) => {
+          setPermissions(buildStateFromPermissions(data.permissions ?? []));
+        })
+        .catch(() => {
+          // Fall back to whatever permissions are on the role object
+          setPermissions(buildStateFromPermissions(role.permissions ?? []));
+        })
+        .finally(() => {
+          setPermissionsLoading(false);
+        });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, role]);
+  }, [open, role?.id]);
 
   const savePermissionsMutation = useMutation({
     mutationFn: async (perms: { module: string; accessLevel: string }[]) => {
@@ -522,59 +549,65 @@ function PermissionEditor({ role, open, onOpenChange }: PermissionEditorProps) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {allModules.map((mod) => {
-            const perm = permissions[mod];
-            return (
-              <div
-                key={mod}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={perm?.enabled ?? false}
-                    onCheckedChange={(checked) => toggleModule(mod, checked)}
-                  />
-                  <span className="font-medium text-sm">
-                    {MODULE_LABELS[mod] ?? mod}
-                  </span>
-                </div>
+        {permissionsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {allModules.map((mod) => {
+              const perm = permissions[mod];
+              return (
+                <div
+                  key={mod}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={perm?.enabled ?? false}
+                      onCheckedChange={(checked) => toggleModule(mod, checked)}
+                    />
+                    <span className="font-medium text-sm">
+                      {MODULE_LABELS[mod] ?? mod}
+                    </span>
+                  </div>
 
-                {perm?.enabled && (
-                  <RadioGroup
-                    value={perm.accessLevel}
-                    onValueChange={(val) =>
-                      setAccessLevel(mod, val as "full" | "exclusive")
-                    }
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem value="full" id={`${mod}-full`} />
-                      <Label
-                        htmlFor={`${mod}-full`}
-                        className="text-xs font-normal cursor-pointer"
-                      >
-                        Full
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem
-                        value="exclusive"
-                        id={`${mod}-exclusive`}
-                      />
-                      <Label
-                        htmlFor={`${mod}-exclusive`}
-                        className="text-xs font-normal cursor-pointer"
-                      >
-                        Exclusive
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  {perm?.enabled && (
+                    <RadioGroup
+                      value={perm.accessLevel}
+                      onValueChange={(val) =>
+                        setAccessLevel(mod, val as "full" | "exclusive")
+                      }
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <RadioGroupItem value="full" id={`${mod}-full`} />
+                        <Label
+                          htmlFor={`${mod}-full`}
+                          className="text-xs font-normal cursor-pointer"
+                        >
+                          Full
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <RadioGroupItem
+                          value="exclusive"
+                          id={`${mod}-exclusive`}
+                        />
+                        <Label
+                          htmlFor={`${mod}-exclusive`}
+                          className="text-xs font-normal cursor-pointer"
+                        >
+                          Exclusive
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
