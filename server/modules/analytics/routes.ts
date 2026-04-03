@@ -6,7 +6,7 @@ import { analyticsStorage } from "./storage";
 const router = Router();
 
 // All analytics routes require an active organization context
-router.use(requireOrg);
+router.use("/api", requireOrg);
 
 // GET /api/dashboard/summary
 // Returns total income, expenses, net profit, and recurring revenue.

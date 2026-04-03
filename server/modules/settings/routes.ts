@@ -10,7 +10,7 @@ import {
 
 const router = Router();
 
-router.use(requireOrg);
+router.use("/api", requireOrg);
 
 // ─── Categories ──────────────────────────────────────────────────────────────
 

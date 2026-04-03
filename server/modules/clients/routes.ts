@@ -7,7 +7,7 @@ import { insertClientSchema, insertClientPermissionsSchema } from "@shared/schem
 const router = Router();
 
 // All client routes require an active org context
-router.use(requireOrg);
+router.use("/api", requireOrg);
 
 // ── GET /api/clients ──────────────────────────────────────────────────────
 router.get("/api/clients", async (req: AuthenticatedRequest, res: Response) => {

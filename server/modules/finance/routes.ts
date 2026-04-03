@@ -6,7 +6,7 @@ import { insertIncomeSchema, insertExpenseSchema, insertSubscriptionSchema } fro
 
 const router = Router();
 
-router.use(requireOrg);
+router.use("/api", requireOrg);
 
 // ── Helper functions ──────────────────────────────────────────────────────────
 
