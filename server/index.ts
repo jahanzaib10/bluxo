@@ -4,6 +4,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import { clerkAuth, resolveBluxoUser } from "./middleware/clerk";
+import { getUserPermissions } from "./middleware/permissions";
 import { setupVite, serveStatic, log } from "./vite";
 
 // Module routes
@@ -88,6 +89,8 @@ app.get("/api/auth/user", (req: any, res) => {
     membership: req.membership || null,
   });
 });
+
+app.get("/api/auth/permissions", getUserPermissions);
 
 // Register module routes
 app.use(financeRoutes);
