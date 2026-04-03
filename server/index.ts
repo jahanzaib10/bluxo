@@ -96,6 +96,7 @@ app.use(settingsRoutes);
 app.use(analyticsRoutes);
 app.use(taxRoutes);
 app.use(rolesRoutes);
+app.use(invoicingRoutes);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
