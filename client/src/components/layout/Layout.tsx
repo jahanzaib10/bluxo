@@ -18,37 +18,46 @@ import {
   Search,
   Moon,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  FileText,
+  Calculator
 } from 'lucide-react';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { cn } from '@/lib/utils';
 import { OrgSwitcher } from './OrgSwitcher';
+import { usePermissions } from "../../hooks/usePermissions";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const navigationItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Income', href: '/income', icon: DollarSign },
-  { name: 'Expenses', href: '/expenses', icon: Receipt },
-  { name: 'Subscriptions', href: '/subscriptions', icon: RefreshCw },
-  { name: 'Clients', href: '/clients', icon: Users },
-  { name: 'People', href: '/employees', icon: UserCircle },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, module: "dashboard" as const },
+  { name: "Income", href: "/income", icon: DollarSign, module: "finance" as const },
+  { name: "Expenses", href: "/expenses", icon: Receipt, module: "finance" as const },
+  { name: "Invoicing", href: "/invoicing", icon: FileText, module: "invoicing" as const },
+  { name: "Subscriptions", href: "/subscriptions", icon: RefreshCw, module: "finance" as const },
+  { name: "Accounting", href: "/accounting", icon: Calculator, module: "finance" as const },
+  { name: "Clients", href: "/clients", icon: Users, module: "clients" as const },
+  { name: "People", href: "/employees", icon: UserCircle, module: "people" as const },
 ];
 
 const settingsItems = [
-  { name: 'Profile', href: '/settings/profile' },
-  { name: 'Organization', href: '/settings/organization' },
-  { name: 'Categories', href: '/settings/categories' },
-  { name: 'Payment Sources', href: '/settings/payment-sources' },
-  { name: 'User Management', href: '/settings/user-management' },
+  { name: "Profile", href: "/settings/profile" },
+  { name: "Organization", href: "/settings/organization" },
+  { name: "Categories", href: "/settings/categories" },
+  { name: "Payment Sources", href: "/settings/payment-sources" },
+  { name: "Tax Rules", href: "/settings/tax-rules" },
+  { name: "User Management", href: "/settings/user-management" },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const { theme, setTheme } = useTheme();
   const [location] = useLocation();
+  const { canAccess, isOwner, roleName } = usePermissions();
+
+  const visibleNavItems = navigationItems.filter((item) => canAccess(item.module));
 
   const isActivePath = (path: string) => {
     if (!location) return false;
@@ -88,7 +97,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Navigation */}
       <nav className="flex-1 px-4 pb-4 space-y-1 overflow-y-auto">
         {/* Main Navigation Items */}
-        {navigationItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = isActivePath(item.href);
 
