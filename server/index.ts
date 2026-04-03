@@ -1,18 +1,31 @@
+// server/index.ts
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
-import { registerRoutes } from "./routes";
+import { createServer } from "http";
+import { clerkAuth, resolveBluxoUser } from "./middleware/clerk";
 import { setupVite, serveStatic, log } from "./vite";
+
+// Module routes
+import webhookRoutes from "./modules/webhooks/routes";
+import financeRoutes from "./modules/finance/routes";
+import clientsRoutes from "./modules/clients/routes";
+import settingsRoutes from "./modules/settings/routes";
+import analyticsRoutes from "./modules/analytics/routes";
 
 const app = express();
 
-// CORS configuration for authentication
+// CORS configuration
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  
-  if (req.method === 'OPTIONS') {
+  res.header("Access-Control-Allow-Origin", req.headers.origin);
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+
+  if (req.method === "OPTIONS") {
     res.sendStatus(200);
   } else {
     next();
@@ -23,6 +36,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
+// Request logging
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -41,11 +55,9 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+        logLine = logLine.slice(0, 79) + "\u2026";
       }
-
       log(logLine);
     }
   });
@@ -53,35 +65,51 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
+// Webhook routes MUST come before Clerk middleware (they verify their own signatures)
+app.use(webhookRoutes);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+// Clerk authentication middleware — applies to all routes after this
+app.use(clerkAuth);
 
-    res.status(status).json({ message });
-    throw err;
-  });
+// Resolve Clerk user/org to our DB records for all /api routes
+app.use("/api", resolveBluxoUser);
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+// Auth check endpoint
+app.get("/api/auth/user", (req: any, res) => {
+  if (!req.bluxoUser) {
+    return res.status(401).json({ message: "Not authenticated" });
   }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  res.json({
+    user: req.bluxoUser,
+    organization: req.bluxoOrg || null,
+    membership: req.membership || null,
   });
-})();
+});
+
+// Register module routes
+app.use(financeRoutes);
+app.use(clientsRoutes);
+app.use(settingsRoutes);
+app.use(analyticsRoutes);
+
+// Error handler
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+  res.status(status).json({ message });
+  throw err;
+});
+
+const server = createServer(app);
+
+// Vite dev server or static serving
+if (app.get("env") === "development") {
+  await setupVite(app, server);
+} else {
+  serveStatic(app);
+}
+
+const port = parseInt(process.env.PORT || "5000", 10);
+server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
+  log(`serving on port ${port}`);
+});
