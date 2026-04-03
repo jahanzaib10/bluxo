@@ -1,4 +1,4 @@
-import { clerkMiddleware, getAuth } from "@clerk/express";
+import { clerkMiddleware, getAuth, clerkClient } from "@clerk/express";
 import { Request, Response, NextFunction } from "express";
 import { db } from "../db";
 import { users, organizations, orgMemberships } from "@shared/schema";
@@ -42,15 +42,46 @@ export async function resolveBluxoUser(
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    // Look up our user record by Clerk ID
-    const [user] = await db
+    // Look up our user record by Clerk ID — auto-sync if not found
+    let [user] = await db
       .select()
       .from(users)
       .where(eq(users.clerkUserId, auth.userId))
       .limit(1);
 
     if (!user) {
-      return res.status(401).json({ message: "User not found in database. Webhook may not have fired yet." });
+      // Auto-sync: fetch user from Clerk API and create local record
+      try {
+        const clerkUser = await clerkClient.users.getUser(auth.userId);
+        const email =
+          clerkUser.emailAddresses?.find(
+            (e) => e.id === clerkUser.primaryEmailAddressId
+          )?.emailAddress || clerkUser.emailAddresses?.[0]?.emailAddress;
+
+        const [created] = await db
+          .insert(users)
+          .values({
+            clerkUserId: clerkUser.id,
+            email: email || null,
+            name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || null,
+            avatarUrl: clerkUser.imageUrl || null,
+          })
+          .onConflictDoUpdate({
+            target: users.clerkUserId,
+            set: {
+              email: email || null,
+              name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || null,
+              avatarUrl: clerkUser.imageUrl || null,
+              updatedAt: new Date(),
+            },
+          })
+          .returning();
+        user = created;
+        console.log(`Auto-synced user ${clerkUser.id} (${email})`);
+      } catch (syncError) {
+        console.error("Failed to auto-sync user:", syncError);
+        return res.status(401).json({ message: "User not found and auto-sync failed" });
+      }
     }
 
     req.bluxoUser = {
@@ -60,13 +91,44 @@ export async function resolveBluxoUser(
       name: user.name || "",
     };
 
-    // If Clerk provides an active org, resolve it
+    // If Clerk provides an active org, resolve it — auto-sync if not found
     if (auth.orgId) {
-      const [org] = await db
+      let [org] = await db
         .select()
         .from(organizations)
         .where(eq(organizations.clerkOrgId, auth.orgId))
         .limit(1);
+
+      if (!org) {
+        // Auto-sync: fetch org from Clerk API and create local record
+        try {
+          const clerkOrg = await clerkClient.organizations.getOrganization({ organizationId: auth.orgId });
+          const slug = clerkOrg.slug || clerkOrg.name?.toLowerCase().replace(/\s+/g, "-");
+
+          const [created] = await db
+            .insert(organizations)
+            .values({
+              clerkOrgId: clerkOrg.id,
+              name: clerkOrg.name,
+              slug,
+              logo: clerkOrg.imageUrl || null,
+            })
+            .onConflictDoUpdate({
+              target: organizations.clerkOrgId,
+              set: {
+                name: clerkOrg.name,
+                slug,
+                logo: clerkOrg.imageUrl || null,
+                updatedAt: new Date(),
+              },
+            })
+            .returning();
+          org = created;
+          console.log(`Auto-synced org ${clerkOrg.id} (${clerkOrg.name})`);
+        } catch (syncError) {
+          console.error("Failed to auto-sync org:", syncError);
+        }
+      }
 
       if (org) {
         req.bluxoOrg = {
@@ -78,8 +140,8 @@ export async function resolveBluxoUser(
           currency: org.currency,
         };
 
-        // Look up membership
-        const [membership] = await db
+        // Look up membership — auto-create if not found
+        let [membership] = await db
           .select()
           .from(orgMemberships)
           .where(
@@ -90,6 +152,25 @@ export async function resolveBluxoUser(
             )
           )
           .limit(1);
+
+        if (!membership) {
+          // Auto-create membership for this user+org
+          try {
+            const [created] = await db
+              .insert(orgMemberships)
+              .values({
+                clerkUserId: auth.userId,
+                organizationId: org.id,
+                isOwner: auth.orgRole === "org:admin",
+              })
+              .onConflictDoNothing()
+              .returning();
+            membership = created;
+            console.log(`Auto-synced membership for user ${auth.userId} in org ${org.name}`);
+          } catch (syncError) {
+            console.error("Failed to auto-sync membership:", syncError);
+          }
+        }
 
         if (membership) {
           req.membership = {
