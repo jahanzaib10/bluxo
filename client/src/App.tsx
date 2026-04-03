@@ -20,7 +20,15 @@ import NotFound from "./pages/NotFound";
 // Pages
 import Clients from "./pages/Clients";
 import Employees from "./pages/Employees";
-import EmployeeExpenses from "./pages/EmployeeExpenses";
+
+// People module pages
+import PeopleDirectory from "./modules/people/pages/PeopleDirectory";
+import PersonDetail from "./modules/people/pages/PersonDetail";
+import PayrollPage from "./modules/people/pages/PayrollPage";
+import LeavePage from "./modules/people/pages/LeavePage";
+import OnboardingPage from "./modules/people/pages/OnboardingPage";
+import PerformancePage from "./modules/people/pages/PerformancePage";
+import BenefitsPage from "./modules/people/pages/BenefitsPage";
 
 // Settings pages
 import ProfileSettings from "./pages/settings/ProfileSettings";
@@ -95,8 +103,16 @@ function OrgRouter() {
         <Route path="/expenses" component={Expenses} />
         <Route path="/subscriptions" component={Subscriptions} />
         <Route path="/clients" component={Clients} />
-        <Route path="/employees" component={Employees} />
-        <Route path="/employees/:employeeId/expenses" component={EmployeeExpenses} />
+        <Route path="/people/:id" component={PersonDetail} />
+        <Route path="/people" component={PeopleDirectory} />
+        <Route path="/payroll" component={PayrollPage} />
+        <Route path="/leave" component={LeavePage} />
+        <Route path="/onboarding" component={OnboardingPage} />
+        <Route path="/performance" component={PerformancePage} />
+        <Route path="/benefits" component={BenefitsPage} />
+        <Route path="/employees">
+          <Redirect to="/people" />
+        </Route>
         <Route path="/settings/profile" component={ProfileSettings} />
         <Route path="/settings/security" component={SecuritySettings} />
         <Route path="/settings/organization" component={OrganizationSettings} />

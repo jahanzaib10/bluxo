@@ -39,7 +39,15 @@ const navigationItems = [
   { name: "Subscriptions", href: "/subscriptions", icon: RefreshCw, module: "finance" as const },
   { name: "Accounting", href: "/accounting", icon: Calculator, module: "finance" as const },
   { name: "Clients", href: "/clients", icon: Users, module: "clients" as const },
-  { name: "People", href: "/employees", icon: UserCircle, module: "people" as const },
+];
+
+const peopleSubItems = [
+  { name: "Directory", href: "/people" },
+  { name: "Payroll", href: "/payroll" },
+  { name: "Leave", href: "/leave" },
+  { name: "Onboarding", href: "/onboarding" },
+  { name: "Performance", href: "/performance" },
+  { name: "Benefits", href: "/benefits" },
 ];
 
 const settingsItems = [
@@ -53,6 +61,7 @@ const settingsItems = [
 
 export function Layout({ children }: LayoutProps) {
   const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [peopleExpanded, setPeopleExpanded] = useState(false);
   const { theme, setTheme } = useTheme();
   const [location] = useLocation();
   const { canAccess, isOwner, roleName } = usePermissions();
@@ -68,10 +77,28 @@ export function Layout({ children }: LayoutProps) {
     return location.startsWith('/settings');
   };
 
+  const isPeoplePath = () => {
+    return (
+      location.startsWith('/people') ||
+      location === '/payroll' ||
+      location === '/leave' ||
+      location === '/onboarding' ||
+      location === '/performance' ||
+      location === '/benefits'
+    );
+  };
+
   // Auto-expand settings if we're on a settings page
   React.useEffect(() => {
     if (isSettingsPath()) {
       setSettingsExpanded(true);
+    }
+  }, [location]);
+
+  // Auto-expand people if we're on a people-related page
+  React.useEffect(() => {
+    if (isPeoplePath()) {
+      setPeopleExpanded(true);
     }
   }, [location]);
 
@@ -117,6 +144,55 @@ export function Layout({ children }: LayoutProps) {
             </Link>
           );
         })}
+
+        {/* People Section */}
+        {canAccess("people") && (
+          <div className="mt-2">
+            <button
+              onClick={() => setPeopleExpanded(!peopleExpanded)}
+              className={cn(
+                "flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                isPeoplePath()
+                  ? "bg-blue-600 text-white"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <UserCircle className="h-5 w-5 shrink-0" />
+                <span>People</span>
+              </div>
+              {peopleExpanded || isPeoplePath() ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </button>
+
+            {/* People Submenu */}
+            {(peopleExpanded || isPeoplePath()) && (
+              <div className="ml-8 mt-1 space-y-1">
+                {peopleSubItems.map((item) => {
+                  const isActive = isActivePath(item.href);
+
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <div
+                        className={cn(
+                          "px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer",
+                          isActive
+                            ? "bg-slate-700 text-white"
+                            : "text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                        )}
+                      >
+                        {item.name}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Settings Section */}
         <div className="mt-6">
