@@ -82,7 +82,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
             <DollarSign className="h-5 w-5 text-white flex-shrink-0" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-white truncate">FIN</h2>
+            <h2 className="text-lg font-semibold text-white truncate">Bluxo</h2>
             <p className="text-sm text-white/70 truncate">Finance Logger</p>
           </div>
         </div>
