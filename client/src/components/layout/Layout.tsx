@@ -4,54 +4,50 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  Home, 
-  TrendingUp, 
-  TrendingDown, 
-  RotateCcw, 
-  Users, 
-  UserCheck, 
-  Settings, 
+import { UserButton } from '@clerk/clerk-react';
+import { dark } from '@clerk/themes';
+import {
+  LayoutDashboard,
+  DollarSign,
+  Receipt,
+  RefreshCw,
+  Users,
+  UserCircle,
+  Settings,
   Menu,
   Search,
   Moon,
-  LogOut,
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
 import { useTheme } from '@/components/theme/ThemeProvider';
-import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { queryClient } from '@/lib/queryClient';
-import ProfileDropdown from '@/components/ProfileDropdown';
+import { OrgSwitcher } from './OrgSwitcher';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const mainNavItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: Home, roles: ['super_admin', 'admin', 'manager', 'viewer'] },
-  { path: '/income', label: 'Income', icon: TrendingUp, roles: ['super_admin', 'admin', 'manager'] },
-  { path: '/expenses', label: 'Expenses', icon: TrendingDown, roles: ['super_admin', 'admin', 'manager'] },
-  { path: '/subscriptions', label: 'Subscriptions', icon: RotateCcw, roles: ['super_admin', 'admin', 'manager'] },
-  { path: '/clients', label: 'Clients', icon: Users, roles: ['super_admin', 'admin', 'manager'] },
-  { path: '/employees', label: 'Employees', icon: UserCheck, roles: ['super_admin', 'admin'] },
+const navigationItems = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Income', href: '/income', icon: DollarSign },
+  { name: 'Expenses', href: '/expenses', icon: Receipt },
+  { name: 'Subscriptions', href: '/subscriptions', icon: RefreshCw },
+  { name: 'Clients', href: '/clients', icon: Users },
+  { name: 'People', href: '/employees', icon: UserCircle },
 ];
 
-const settingsNavItems = [
-  { path: '/settings/profile', label: 'Profile', roles: ['super_admin', 'admin', 'manager', 'viewer'] },
-  { path: '/settings/security', label: 'Security', roles: ['super_admin', 'admin', 'manager', 'viewer'] },
-  { path: '/settings/organization', label: 'Organization', roles: ['super_admin', 'admin'] },
-  { path: '/settings/categories', label: 'Categories', roles: ['super_admin', 'admin', 'manager'] },
-  { path: '/settings/payment-sources', label: 'Payment Sources', roles: ['super_admin', 'admin', 'manager'] },
-  { path: '/settings/user-management', label: 'User Management', roles: ['super_admin', 'admin'] },
+const settingsItems = [
+  { name: 'Profile', href: '/settings/profile' },
+  { name: 'Organization', href: '/settings/organization' },
+  { name: 'Categories', href: '/settings/categories' },
+  { name: 'Payment Sources', href: '/settings/payment-sources' },
+  { name: 'User Management', href: '/settings/user-management' },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
   const [location] = useLocation();
 
   const isActivePath = (path: string) => {
@@ -63,37 +59,6 @@ export function Layout({ children }: LayoutProps) {
     return location.startsWith('/settings');
   };
 
-  const handleLogout = async () => {
-    try {
-      // Call the server logout endpoint to clear HTTP-only cookie
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-    } catch (error) {
-      console.error('Logout API call failed:', error);
-    }
-    
-    // Clear client-side authentication data
-    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-    localStorage.removeItem('auth_token');
-    
-    // Clear all React Query cache
-    queryClient.clear();
-    
-    // Force a complete page reload to ensure clean state
-    window.location.reload();
-  };
-
-  const getUserInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   // Auto-expand settings if we're on a settings page
   React.useEffect(() => {
     if (isSettingsPath()) {
@@ -103,16 +68,14 @@ export function Layout({ children }: LayoutProps) {
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <div className="flex h-full flex-col bg-slate-900 dark:bg-slate-950">
-      {/* Header with Logo */}
-      <div className="flex items-center gap-3 p-6 border-b border-slate-700/50">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-          <TrendingUp className="h-5 w-5 text-white" />
-        </div>
-        <span className="text-lg font-semibold text-white">FIN</span>
+      {/* Header with Logo and Org Switcher */}
+      <div className="p-4">
+        <h1 className="text-xl font-bold text-white mb-4">Bluxo</h1>
+        <OrgSwitcher />
       </div>
 
       {/* Search Bar */}
-      <div className="p-4">
+      <div className="px-4 pb-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
@@ -125,28 +88,26 @@ export function Layout({ children }: LayoutProps) {
       {/* Navigation */}
       <nav className="flex-1 px-4 pb-4 space-y-1 overflow-y-auto">
         {/* Main Navigation Items */}
-        {mainNavItems
-          .filter(item => user?.role && item.roles.includes(user.role))
-          .map((item) => {
-            const Icon = item.icon;
-            const isActive = isActivePath(item.path);
-            
-            return (
-              <Link key={item.path} href={item.path}>
-                <div
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
-                    isActive 
-                      ? "bg-blue-600 text-white" 
-                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                  )}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <span>{item.label}</span>
-                </div>
-              </Link>
-            );
-          })}
+        {navigationItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = isActivePath(item.href);
+
+          return (
+            <Link key={item.href} href={item.href}>
+              <div
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+                  isActive
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                )}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span>{item.name}</span>
+              </div>
+            </Link>
+          );
+        })}
 
         {/* Settings Section */}
         <div className="mt-6">
@@ -154,8 +115,8 @@ export function Layout({ children }: LayoutProps) {
             onClick={() => setSettingsExpanded(!settingsExpanded)}
             className={cn(
               "flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-              isSettingsPath() 
-                ? "bg-blue-600 text-white" 
+              isSettingsPath()
+                ? "bg-blue-600 text-white"
                 : "text-slate-300 hover:bg-slate-800 hover:text-white"
             )}
           >
@@ -173,26 +134,24 @@ export function Layout({ children }: LayoutProps) {
           {/* Settings Submenu */}
           {(settingsExpanded || isSettingsPath()) && (
             <div className="ml-8 mt-1 space-y-1">
-              {settingsNavItems
-                .filter(item => user?.role && item.roles.includes(user.role))
-                .map((item) => {
-                  const isActive = isActivePath(item.path);
-                  
-                  return (
-                    <Link key={item.path} href={item.path}>
-                      <div
-                        className={cn(
-                          "px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer",
-                          isActive 
-                            ? "bg-slate-700 text-white" 
-                            : "text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-                        )}
-                      >
-                        {item.label}
-                      </div>
-                    </Link>
-                  );
-                })}
+              {settingsItems.map((item) => {
+                const isActive = isActivePath(item.href);
+
+                return (
+                  <Link key={item.href} href={item.href}>
+                    <div
+                      className={cn(
+                        "px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer",
+                        isActive
+                          ? "bg-slate-700 text-white"
+                          : "text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                      )}
+                    >
+                      {item.name}
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
@@ -213,34 +172,18 @@ export function Layout({ children }: LayoutProps) {
           />
         </div>
 
-        {/* User Profile */}
-        {user && (
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src="" alt={user.name || user.email || ''} />
-              <AvatarFallback className="bg-blue-600 text-white text-xs">
-                {getUserInitials(user.name || user.email || 'User')}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {user.name || 'User'}
-              </p>
-              <p className="text-xs text-slate-400 truncate">
-                {user.email}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-700"
-              title="Logout"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+        {/* User Profile via Clerk */}
+        <div className="p-4 border-t border-slate-700">
+          <UserButton
+            appearance={{
+              baseTheme: dark,
+              elements: {
+                userButtonBox: "w-full",
+                userButtonTrigger: "w-full justify-start",
+              },
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -272,9 +215,17 @@ export function Layout({ children }: LayoutProps) {
             {/* Mobile menu button space */}
             <div className="w-10 md:hidden" />
           </div>
-          
+
           <div className="flex items-center gap-4">
-            <ProfileDropdown />
+            <UserButton
+              appearance={{
+                baseTheme: dark,
+                elements: {
+                  userButtonBox: "",
+                  userButtonTrigger: "",
+                },
+              }}
+            />
           </div>
         </header>
 
