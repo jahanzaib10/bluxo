@@ -17,9 +17,9 @@ import Expenses from "./pages/Expenses";
 import Subscriptions from "./pages/Subscriptions";
 import NotFound from "./pages/NotFound";
 
-// Pages — note lowercase filenames on disk
-import Clients from "./pages/clients";
-import Employees from "./pages/employees";
+// Pages
+import Clients from "./pages/Clients";
+import Employees from "./pages/Employees";
 import EmployeeExpenses from "./pages/EmployeeExpenses";
 
 // Settings pages
