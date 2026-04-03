@@ -12,6 +12,9 @@ import financeRoutes from "./modules/finance/routes";
 import clientsRoutes from "./modules/clients/routes";
 import settingsRoutes from "./modules/settings/routes";
 import analyticsRoutes from "./modules/analytics/routes";
+import taxRoutes from "./modules/tax/routes";
+import rolesRoutes from "./modules/roles/routes";
+import invoicingRoutes from "./modules/invoicing/routes";
 
 const app = express();
 
@@ -91,6 +94,8 @@ app.use(financeRoutes);
 app.use(clientsRoutes);
 app.use(settingsRoutes);
 app.use(analyticsRoutes);
+app.use(taxRoutes);
+app.use(rolesRoutes);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
