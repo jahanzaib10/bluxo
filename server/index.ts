@@ -21,6 +21,8 @@ import peopleRoutes from "./modules/people/routes";
 import leaveRoutes from "./modules/people/leave-routes";
 import documentsRoutes from "./modules/people/documents-routes";
 import benefitsRoutes from "./modules/people/benefits-routes";
+import onboardingRoutes from "./modules/people/onboarding-routes";
+import performanceRoutes from "./modules/people/performance-routes";
 
 const app = express();
 
@@ -110,6 +112,8 @@ app.use(peopleRoutes);
 app.use(leaveRoutes);
 app.use(documentsRoutes);
 app.use(benefitsRoutes);
+app.use(onboardingRoutes);
+app.use(performanceRoutes);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
