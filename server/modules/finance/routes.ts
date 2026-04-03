@@ -2,7 +2,9 @@ import { Router } from "express";
 import { requireOrg, getOrgId } from "../../middleware/orgContext";
 import { AuthenticatedRequest } from "../../middleware/clerk";
 import { financeStorage } from "./storage";
-import { insertIncomeSchema, insertExpenseSchema, insertSubscriptionSchema } from "@shared/schema";
+import { insertIncomeSchema, insertExpenseSchema, insertSubscriptionSchema, expenses } from "@shared/schema";
+import { db } from "../../db";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -354,6 +356,42 @@ router.delete("/expenses/:id", async (req: AuthenticatedRequest, res) => {
   } catch (error) {
     console.error("Error deleting expense:", error);
     res.status(500).json({ message: "Failed to delete expense" });
+  }
+});
+
+// Approve expense
+router.put("/api/expenses/:id/approve", async (req: AuthenticatedRequest, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const [result] = await db.update(expenses)
+      .set({
+        approvalStatus: "approved",
+        approvedById: req.bluxoUser!.clerkUserId,
+      })
+      .where(and(eq(expenses.id, req.params.id), eq(expenses.organizationId, orgId)))
+      .returning();
+    if (!result) return res.status(404).json({ message: "Expense not found" });
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Reject expense
+router.put("/api/expenses/:id/reject", async (req: AuthenticatedRequest, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const [result] = await db.update(expenses)
+      .set({
+        approvalStatus: "rejected",
+        approvedById: req.bluxoUser!.clerkUserId,
+      })
+      .where(and(eq(expenses.id, req.params.id), eq(expenses.organizationId, orgId)))
+      .returning();
+    if (!result) return res.status(404).json({ message: "Expense not found" });
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 
