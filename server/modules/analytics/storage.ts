@@ -144,6 +144,81 @@ export const analyticsStorage = {
     }));
   },
 
+  async getProfitAndLoss(organizationId: string, startDate?: string, endDate?: string) {
+    const incomeFilters = [eq(income.organizationId, organizationId)];
+    const expenseFilters = [eq(expenses.organizationId, organizationId)];
+    if (startDate) {
+      incomeFilters.push(gte(income.date, startDate));
+      expenseFilters.push(gte(expenses.date, startDate));
+    }
+    if (endDate) {
+      incomeFilters.push(lte(income.date, endDate));
+      expenseFilters.push(lte(expenses.date, endDate));
+    }
+
+    const incomeByCategory = await db
+      .select({
+        categoryId: income.categoryId,
+        categoryName: categories.name,
+        total: sql<string>`COALESCE(SUM(${income.amount}), '0')`,
+      })
+      .from(income)
+      .leftJoin(categories, eq(income.categoryId, categories.id))
+      .where(and(...incomeFilters))
+      .groupBy(income.categoryId, categories.name);
+
+    const expensesByCategory = await db
+      .select({
+        categoryId: expenses.categoryId,
+        categoryName: categories.name,
+        total: sql<string>`COALESCE(SUM(${expenses.amount}), '0')`,
+      })
+      .from(expenses)
+      .leftJoin(categories, eq(expenses.categoryId, categories.id))
+      .where(and(...expenseFilters))
+      .groupBy(expenses.categoryId, categories.name);
+
+    const totalIncome = incomeByCategory.reduce((sum, r) => sum + parseFloat(r.total), 0);
+    const totalExpenses = expensesByCategory.reduce((sum, r) => sum + parseFloat(r.total), 0);
+
+    return {
+      income: incomeByCategory,
+      expenses: expensesByCategory,
+      totalIncome,
+      totalExpenses,
+      netProfit: totalIncome - totalExpenses,
+    };
+  },
+
+  async getTaxSummary(organizationId: string, startDate?: string, endDate?: string) {
+    const incomeFilters = [eq(income.organizationId, organizationId)];
+    const expenseFilters = [eq(expenses.organizationId, organizationId)];
+    if (startDate) {
+      incomeFilters.push(gte(income.date, startDate));
+      expenseFilters.push(gte(expenses.date, startDate));
+    }
+    if (endDate) {
+      incomeFilters.push(lte(income.date, endDate));
+      expenseFilters.push(lte(expenses.date, endDate));
+    }
+
+    const [incomeTax] = await db
+      .select({ total: sql<string>`COALESCE(SUM(${income.taxAmount}), '0')` })
+      .from(income)
+      .where(and(...incomeFilters));
+
+    const [expenseTax] = await db
+      .select({ total: sql<string>`COALESCE(SUM(${expenses.taxAmount}), '0')` })
+      .from(expenses)
+      .where(and(...expenseFilters));
+
+    return {
+      taxCollected: parseFloat(incomeTax?.total || "0"),
+      taxPaid: parseFloat(expenseTax?.total || "0"),
+      netTax: parseFloat(incomeTax?.total || "0") - parseFloat(expenseTax?.total || "0"),
+    };
+  },
+
   /**
    * getExpenseBreakdown
    * Returns top 5 expense categories (rolled up to parent category).

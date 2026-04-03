@@ -70,4 +70,28 @@ router.get("/expense-breakdown", async (req: AuthenticatedRequest, res) => {
   }
 });
 
+router.get("/api/accounting/pnl", async (req: AuthenticatedRequest, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const result = await analyticsStorage.getProfitAndLoss(
+      getOrgId(req), startDate as string, endDate as string
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/api/accounting/tax-summary", async (req: AuthenticatedRequest, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const result = await analyticsStorage.getTaxSummary(
+      getOrgId(req), startDate as string, endDate as string
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 export default router;
