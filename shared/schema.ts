@@ -145,6 +145,12 @@ export const income = pgTable("income", {
   }).default('paid'),
   invoiceId: varchar("invoice_id"),
   currency: varchar("currency", { length: 3 }).default('USD'),
+  taxAmount: decimal("tax_amount", { precision: 12, scale: 2 }),
+  taxRuleId: uuid("tax_rule_id"),
+  dueDate: date("due_date"),
+  paymentStatus: varchar("payment_status", {
+    enum: ["pending", "partial", "paid", "overdue"],
+  }).default("paid"),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -161,6 +167,12 @@ export const expenses = pgTable("expenses", {
     enum: ['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly']
   }),
   recurringEndDate: date("recurring_end_date"),
+  taxAmount: decimal("tax_amount", { precision: 12, scale: 2 }),
+  taxRuleId: uuid("tax_rule_id"),
+  approvalStatus: varchar("approval_status", {
+    enum: ["pending", "approved", "rejected"],
+  }).default("approved"),
+  approvedById: varchar("approved_by_id"),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -384,6 +396,10 @@ export const insertIncomeSchema = z.object({
   status: z.enum(['pending', 'paid', 'failed']).optional(),
   invoiceId: z.string().optional(),
   currency: z.string().length(3).optional(),
+  taxAmount: z.string().optional(),
+  taxRuleId: z.string().uuid().optional().nullable(),
+  dueDate: z.string().optional().nullable(),
+  paymentStatus: z.enum(["pending", "partial", "paid", "overdue"]).optional(),
 });
 
 export const insertExpenseSchema = z.object({
@@ -392,6 +408,9 @@ export const insertExpenseSchema = z.object({
   personId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),
   description: z.string().optional(),
+  taxAmount: z.string().optional(),
+  taxRuleId: z.string().uuid().optional().nullable(),
+  approvalStatus: z.enum(["pending", "approved", "rejected"]).optional(),
 });
 
 export const insertSubscriptionSchema = z.object({
