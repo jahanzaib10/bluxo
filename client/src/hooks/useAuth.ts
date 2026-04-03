@@ -1,18 +1,29 @@
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useUser, useOrganization, useClerk } from "@clerk/clerk-react";
 
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery({
-    queryKey: ["/api/auth/user"],
-    queryFn: () => apiRequest("/api/auth/user", "GET"),
-    retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  const { user, isLoaded: isUserLoaded, isSignedIn } = useUser();
+  const { organization, isLoaded: isOrgLoaded } = useOrganization();
+  const { signOut } = useClerk();
 
   return {
-    user,
-    isLoading,
-    isAuthenticated: !!user && !error,
-    error
+    user: user
+      ? {
+          id: user.id,
+          email: user.primaryEmailAddress?.emailAddress || "",
+          name: user.fullName || "",
+          avatarUrl: user.imageUrl,
+        }
+      : null,
+    organization: organization
+      ? {
+          id: organization.id,
+          name: organization.name,
+          slug: organization.slug || "",
+          imageUrl: organization.imageUrl,
+        }
+      : null,
+    isLoaded: isUserLoaded && isOrgLoaded,
+    isSignedIn: !!isSignedIn,
+    signOut: () => signOut(),
   };
 }
