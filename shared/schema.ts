@@ -14,37 +14,47 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table for authentication
-export const sessions = pgTable(
-  "sessions",
-  {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
-  },
-  (table) => [index("IDX_session_expire").on(table.expire)],
-);
-
 // Core tables
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
+  clerkOrgId: varchar("clerk_org_id", { length: 255 }).unique(),
   name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).unique(),
+  logo: varchar("logo"),
+  country: varchar("country", { length: 3 }),
+  currency: varchar("currency", { length: 3 }).default("USD"),
+  timezone: varchar("timezone").default("UTC"),
+  taxId: varchar("tax_id"),
+  address: text("address"),
+  phone: varchar("phone"),
+  website: varchar("website"),
+  fiscalYearStart: varchar("fiscal_year_start", { length: 2 }).default("01"),
+  industry: varchar("industry"),
+  status: varchar("status", { enum: ["active", "suspended", "archived"] }).default("active"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
+  id: uuid("id").primaryKey().defaultRandom(),
+  clerkUserId: varchar("clerk_user_id", { length: 255 }).unique().notNull(),
+  email: varchar("email"),
   name: varchar("name"),
-  password: varchar("password"),
-  profileImageUrl: varchar("profile_image_url"),
-  organizationId: uuid("organization_id").references(() => organizations.id),
-  role: varchar("role", { enum: ["super_admin", "admin", "manager", "client", "viewer"] }).default("viewer"),
-  type: varchar("type", { enum: ["internal", "client"] }).default("internal"),
-  status: varchar("status", { enum: ["active", "suspended", "inactive"] }).default("active"),
-  lastLoginAt: timestamp("last_login_at"),
+  avatarUrl: varchar("avatar_url"),
+  lastActiveOrgId: uuid("last_active_org_id").references(() => organizations.id),
+  preferences: jsonb("preferences").$type<{ theme?: string; locale?: string }>(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const orgMemberships = pgTable("org_memberships", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clerkUserId: varchar("clerk_user_id").references(() => users.clerkUserId).notNull(),
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
+  customRoleId: uuid("custom_role_id"),
+  isOwner: boolean("is_owner").default(false),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  status: varchar("status", { enum: ["active", "suspended", "removed"] }).default("active"),
 });
 
 export const clients = pgTable("clients", {
@@ -73,43 +83,23 @@ export const clientPermissions = pgTable("client_permissions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const clientAuthTokens = pgTable("client_auth_tokens", {
+export const people = pgTable("people", {
   id: uuid("id").primaryKey().defaultRandom(),
-  token: varchar("token", { length: 255 }).notNull().unique(),
-  clientId: uuid("client_id").references(() => clients.id).notNull(),
-  email: varchar("email").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  used: boolean("used").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const userInvitations = pgTable("user_invitations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: varchar("email", { length: 255 }).notNull(),
-  token: varchar("token", { length: 255 }).notNull().unique(),
-  role: varchar("role", { enum: ["super_admin", "admin", "manager", "client", "viewer"] }).notNull(),
-  type: varchar("type", { enum: ["internal", "client"] }).notNull(),
-  status: varchar("status", { enum: ["pending", "expired", "accepted", "cancelled"] }).default("pending"),
-  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
-  invitedById: varchar("invited_by_id").references(() => users.id).notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const employees = pgTable("employees", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { enum: ["employee", "contractor"] }).default("employee"),
+  firstName: varchar("first_name", { length: 255 }).notNull(),
+  lastName: varchar("last_name", { length: 255 }),
   email: varchar("email"),
+  phone: varchar("phone"),
+  avatarUrl: varchar("avatar_url"),
   position: varchar("position"),
+  department: varchar("department"),
   country: varchar("country"),
   startDate: date("start_date"),
   endDate: date("end_date"),
-  status: varchar("status").default("active"),
-  birthDate: date("birth_date"),
+  status: varchar("status", { enum: ["active", "on_leave", "terminated", "offboarding"] }).default("active"),
   seniorityLevel: varchar("seniority_level"),
   paymentAmount: decimal("payment_amount", { precision: 12, scale: 2 }),
-  directManagerId: uuid("direct_manager_id").references(() => employees.id),
+  directManagerId: uuid("direct_manager_id").references((): any => people.id),
   groupName: varchar("group_name"),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -142,12 +132,12 @@ export const income = pgTable("income", {
   categoryId: uuid("category_id").references(() => categories.id),
   description: text("description"),
   isRecurring: boolean("is_recurring").default(false),
-  recurringFrequency: varchar("recurring_frequency", { 
-    enum: ['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly'] 
+  recurringFrequency: varchar("recurring_frequency", {
+    enum: ['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly']
   }),
   recurringEndDate: date("recurring_end_date"),
-  status: varchar("status", { 
-    enum: ['pending', 'paid', 'failed'] 
+  status: varchar("status", {
+    enum: ['pending', 'paid', 'failed']
   }).default('paid'),
   invoiceId: varchar("invoice_id"),
   currency: varchar("currency", { length: 3 }).default('USD'),
@@ -160,11 +150,11 @@ export const expenses = pgTable("expenses", {
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   description: text("description"),
   date: date("date").notNull(),
-  employeeId: uuid("employee_id").references(() => employees.id),
+  personId: uuid("person_id").references(() => people.id),
   categoryId: uuid("category_id").references(() => categories.id),
   isRecurring: boolean("is_recurring").default(false),
-  recurringFrequency: varchar("recurring_frequency", { 
-    enum: ['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly'] 
+  recurringFrequency: varchar("recurring_frequency", {
+    enum: ['weekly', 'monthly', 'quarterly', 'bi-annual', 'yearly']
   }),
   recurringEndDate: date("recurring_end_date"),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
@@ -181,7 +171,7 @@ export const subscriptions = pgTable("subscriptions", {
   reconciled: boolean("reconciled").default(false),
   subscriptionType: varchar("subscription_type").default("self"), // "self", "client"
   clientId: uuid("client_id").references(() => clients.id),
-  employeeId: uuid("employee_id").references(() => employees.id),
+  employeeId: uuid("employee_id").references(() => people.id),
   categoryId: uuid("category_id").references(() => categories.id),
   paymentSourceId: uuid("payment_source_id").references(() => paymentSources.id),
   organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
@@ -190,9 +180,9 @@ export const subscriptions = pgTable("subscriptions", {
 
 // Relations
 export const organizationsRelations = relations(organizations, ({ many }) => ({
-  users: many(users),
+  memberships: many(orgMemberships),
+  people: many(people),
   clients: many(clients),
-  employees: many(employees),
   categories: many(categories),
   paymentSources: many(paymentSources),
   income: many(income),
@@ -201,21 +191,21 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [users.organizationId],
+  lastActiveOrg: one(organizations, {
+    fields: [users.lastActiveOrgId],
     references: [organizations.id],
   }),
-  sentInvitations: many(userInvitations),
+  memberships: many(orgMemberships),
 }));
 
-export const userInvitationsRelations = relations(userInvitations, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [userInvitations.organizationId],
-    references: [organizations.id],
+export const orgMembershipsRelations = relations(orgMemberships, ({ one }) => ({
+  user: one(users, {
+    fields: [orgMemberships.clerkUserId],
+    references: [users.clerkUserId],
   }),
-  invitedBy: one(users, {
-    fields: [userInvitations.invitedById],
-    references: [users.id],
+  organization: one(organizations, {
+    fields: [orgMemberships.organizationId],
+    references: [organizations.id],
   }),
 }));
 
@@ -226,7 +216,6 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   }),
   income: many(income),
   permissions: one(clientPermissions),
-  authTokens: many(clientAuthTokens),
 }));
 
 export const clientPermissionsRelations = relations(clientPermissions, ({ one }) => ({
@@ -240,16 +229,9 @@ export const clientPermissionsRelations = relations(clientPermissions, ({ one })
   }),
 }));
 
-export const clientAuthTokensRelations = relations(clientAuthTokens, ({ one }) => ({
-  client: one(clients, {
-    fields: [clientAuthTokens.clientId],
-    references: [clients.id],
-  }),
-}));
-
-export const employeesRelations = relations(employees, ({ one, many }) => ({
+export const peopleRelations = relations(people, ({ one, many }) => ({
   organization: one(organizations, {
-    fields: [employees.organizationId],
+    fields: [people.organizationId],
     references: [organizations.id],
   }),
   expenses: many(expenses),
@@ -304,9 +286,9 @@ export const expensesRelations = relations(expenses, ({ one }) => ({
     fields: [expenses.organizationId],
     references: [organizations.id],
   }),
-  employee: one(employees, {
-    fields: [expenses.employeeId],
-    references: [employees.id],
+  person: one(people, {
+    fields: [expenses.personId],
+    references: [people.id],
   }),
   category: one(categories, {
     fields: [expenses.categoryId],
@@ -323,9 +305,9 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
     fields: [subscriptions.clientId],
     references: [clients.id],
   }),
-  employee: one(employees, {
+  employee: one(people, {
     fields: [subscriptions.employeeId],
-    references: [employees.id],
+    references: [people.id],
   }),
   category: one(categories, {
     fields: [subscriptions.categoryId],
@@ -361,10 +343,17 @@ export const clientAuthRequestSchema = z.object({
   email: z.string().email(),
 });
 
-export const insertEmployeeSchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email().optional(),
+export const insertPersonSchema = z.object({
+  type: z.enum(["employee", "contractor"]).default("employee"),
+  firstName: z.string().min(1),
+  lastName: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().optional(),
   position: z.string().optional(),
+  department: z.string().optional(),
+  country: z.string().optional(),
+  startDate: z.string().optional(),
+  seniorityLevel: z.string().optional(),
 });
 
 export const insertCategorySchema = z.object({
@@ -396,7 +385,7 @@ export const insertIncomeSchema = z.object({
 export const insertExpenseSchema = z.object({
   amount: z.string(),
   date: z.string(),
-  employeeId: z.string().uuid().optional(),
+  personId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),
   description: z.string().optional(),
 });
@@ -415,53 +404,31 @@ export const insertSubscriptionSchema = z.object({
   paymentSourceId: z.string().uuid().optional(),
 });
 
-// User schema for Replit Auth compatibility
-export const upsertUserSchema = createInsertSchema(users).partial().extend({
-  id: z.string(),
-});
-
-export const insertUserInvitationSchema = z.object({
-  email: z.string().email(),
-  role: z.enum(["super_admin", "admin", "manager", "client", "viewer"]),
-  type: z.enum(["internal", "client"]),
-});
-
-export const updateUserRoleSchema = z.object({
-  role: z.enum(["super_admin", "admin", "manager", "client", "viewer"]),
-});
-
-export const updateUserStatusSchema = z.object({
-  status: z.enum(["active", "suspended", "inactive"]),
-});
-
-export const insertOrganizationSchema = createInsertSchema(organizations).pick({
-  name: true,
+export const insertOrganizationSchema = z.object({
+  name: z.string().min(1),
+  slug: z.string().min(1).optional(),
+  country: z.string().max(3).optional(),
+  currency: z.string().max(3).default("USD"),
+  timezone: z.string().optional(),
+  industry: z.string().optional(),
 });
 
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type User = typeof users.$inferSelect;
-export type UserInvitation = typeof userInvitations.$inferSelect;
+export type OrgMembership = typeof orgMemberships.$inferSelect;
+export type Person = typeof people.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type ClientPermissions = typeof clientPermissions.$inferSelect;
-export type ClientAuthToken = typeof clientAuthTokens.$inferSelect;
-export type Employee = typeof employees.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type PaymentSource = typeof paymentSources.$inferSelect;
 export type Income = typeof income.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 
-// Insert types for forms
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
-export type UpsertUser = z.infer<typeof upsertUserSchema>;
-export type InsertUserInvitation = z.infer<typeof insertUserInvitationSchema>;
-export type UpdateUserRole = z.infer<typeof updateUserRoleSchema>;
-export type UpdateUserStatus = z.infer<typeof updateUserStatusSchema>;
+export type InsertPerson = z.infer<typeof insertPersonSchema>;
 export type InsertClient = z.infer<typeof insertClientSchema>;
-export type InsertClientPermissions = z.infer<typeof insertClientPermissionsSchema>;
-export type ClientAuthRequest = z.infer<typeof clientAuthRequestSchema>;
-export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertPaymentSource = z.infer<typeof insertPaymentSourceSchema>;
 export type InsertIncome = z.infer<typeof insertIncomeSchema>;
