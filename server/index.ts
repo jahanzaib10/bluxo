@@ -19,6 +19,7 @@ import invoicingRoutes from "./modules/invoicing/routes";
 import payrollRoutes from "./modules/people/payroll-routes";
 import peopleRoutes from "./modules/people/routes";
 import leaveRoutes from "./modules/people/leave-routes";
+import documentsRoutes from "./modules/people/documents-routes";
 
 const app = express();
 
@@ -106,6 +107,7 @@ app.use(invoicingRoutes);
 app.use(payrollRoutes);
 app.use(peopleRoutes);
 app.use(leaveRoutes);
+app.use(documentsRoutes);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
