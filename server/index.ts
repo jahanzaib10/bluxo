@@ -16,6 +16,9 @@ import analyticsRoutes from "./modules/analytics/routes";
 import taxRoutes from "./modules/tax/routes";
 import rolesRoutes from "./modules/roles/routes";
 import invoicingRoutes from "./modules/invoicing/routes";
+import payrollRoutes from "./modules/people/payroll-routes";
+import peopleRoutes from "./modules/people/routes";
+import leaveRoutes from "./modules/people/leave-routes";
 
 const app = express();
 
@@ -100,6 +103,9 @@ app.use(analyticsRoutes);
 app.use(taxRoutes);
 app.use(rolesRoutes);
 app.use(invoicingRoutes);
+app.use(payrollRoutes);
+app.use(peopleRoutes);
+app.use(leaveRoutes);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
