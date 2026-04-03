@@ -43,7 +43,7 @@ router.get("/api/roles/:id", async (req: AuthenticatedRequest, res) => {
 router.post("/api/roles", async (req: AuthenticatedRequest, res) => {
   try {
     const organizationId = getOrgId(req);
-    const validatedData = insertRoleSchema.parse(req.body);
+    const validatedData = insertRoleSchema.parse(req.body) as { name: string; description?: string };
     const newRole = await rolesStorage.createRole(validatedData, organizationId);
     res.status(201).json(newRole);
   } catch (error) {
@@ -98,7 +98,7 @@ router.put("/api/roles/:id/permissions", async (req: AuthenticatedRequest, res) 
     }
 
     const { permissions } = updateRolePermissionsSchema.parse(req.body);
-    const result = await rolesStorage.setRolePermissions(id, permissions);
+    const result = await rolesStorage.setRolePermissions(id, permissions as any);
     res.json(result);
   } catch (error) {
     console.error("Error setting role permissions:", error);
@@ -163,7 +163,7 @@ router.get("/api/teams", async (req: AuthenticatedRequest, res) => {
 router.post("/api/teams", async (req: AuthenticatedRequest, res) => {
   try {
     const organizationId = getOrgId(req);
-    const validatedData = insertTeamSchema.parse(req.body);
+    const validatedData = insertTeamSchema.parse(req.body) as { name: string; description?: string };
     const newTeam = await rolesStorage.createTeam(validatedData, organizationId);
     res.status(201).json(newTeam);
   } catch (error) {

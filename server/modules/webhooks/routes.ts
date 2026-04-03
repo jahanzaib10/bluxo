@@ -55,7 +55,7 @@ router.post("/api/webhooks/clerk", async (req: Request, res: Response) => {
             email: email || null,
             name: `${data.first_name || ""} ${data.last_name || ""}`.trim() || null,
             avatarUrl: data.image_url || null,
-          })
+          } as any)
           .onConflictDoUpdate({
             target: users.clerkUserId,
             set: {
@@ -63,7 +63,7 @@ router.post("/api/webhooks/clerk", async (req: Request, res: Response) => {
               name: `${data.first_name || ""} ${data.last_name || ""}`.trim() || null,
               avatarUrl: data.image_url || null,
               updatedAt: new Date(),
-            },
+            } as any,
           });
         break;
       }
@@ -87,7 +87,7 @@ router.post("/api/webhooks/clerk", async (req: Request, res: Response) => {
             name: data.name,
             slug,
             logo: data.image_url || null,
-          })
+          } as any)
           .onConflictDoUpdate({
             target: organizations.clerkOrgId,
             set: {
@@ -95,7 +95,7 @@ router.post("/api/webhooks/clerk", async (req: Request, res: Response) => {
               slug,
               logo: data.image_url || null,
               updatedAt: new Date(),
-            },
+            } as any,
           });
         break;
       }
@@ -105,7 +105,7 @@ router.post("/api/webhooks/clerk", async (req: Request, res: Response) => {
           // Soft delete — set status to archived
           await db
             .update(organizations)
-            .set({ status: "archived", updatedAt: new Date() })
+            .set({ status: "archived", updatedAt: new Date() } as any)
             .where(eq(organizations.clerkOrgId, data.id));
         }
         break;
@@ -132,7 +132,7 @@ router.post("/api/webhooks/clerk", async (req: Request, res: Response) => {
                 clerkUserId: userClerkId,
                 organizationId: org.id,
                 isOwner,
-              })
+              } as any)
               .onConflictDoNothing(); // Ignore if already exists
           }
         }
@@ -153,7 +153,7 @@ router.post("/api/webhooks/clerk", async (req: Request, res: Response) => {
           if (org) {
             await db
               .update(orgMemberships)
-              .set({ status: "removed" })
+              .set({ status: "removed" } as any)
               .where(
                 and(
                   eq(orgMemberships.clerkUserId, userClerkId2),

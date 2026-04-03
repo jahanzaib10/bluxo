@@ -31,8 +31,8 @@ export const settingsStorage = {
   async createCategory(category: InsertCategory & { organizationId: string }): Promise<Category> {
     const [newCategory] = await db
       .insert(categories)
-      .values(category)
-      .returning();
+      .values(category as any)
+      .returning() as any as Category[];
     return newCategory;
   },
 
@@ -170,8 +170,8 @@ export const settingsStorage = {
       if (topLevelCategories.length > 0) {
         insertedTopLevel = await db
           .insert(categories)
-          .values(topLevelCategories)
-          .returning();
+          .values(topLevelCategories as any)
+          .returning() as any as Category[];
       }
 
       // Second pass: insert children with resolved parent IDs
@@ -216,8 +216,8 @@ export const settingsStorage = {
       if (childCategoryData.length > 0) {
         insertedChildren = await db
           .insert(categories)
-          .values(childCategoryData)
-          .returning();
+          .values(childCategoryData as any)
+          .returning() as any as Category[];
       }
 
       insertedCategories = [...insertedTopLevel, ...insertedChildren];
@@ -240,7 +240,7 @@ export const settingsStorage = {
   ): Promise<PaymentSource> {
     const [newPaymentSource] = await db
       .insert(paymentSources)
-      .values(data)
+      .values(data as any)
       .returning();
     return newPaymentSource;
   },
@@ -280,7 +280,7 @@ export const settingsStorage = {
   ): Promise<Organization | undefined> {
     const [updated] = await db
       .update(organizations)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...data, updatedAt: new Date() } as any)
       .where(eq(organizations.id, organizationId))
       .returning();
     return updated;

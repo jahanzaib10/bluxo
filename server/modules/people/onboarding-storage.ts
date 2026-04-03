@@ -127,10 +127,10 @@ export const onboardingStorage = {
     const [updated] = await db
       .update(onboardingProgress)
       .set({
-        status: status as any,
+        status: status,
         completedById: completedById ?? null,
         completedAt: status === "completed" ? new Date() : null,
-      })
+      } as any)
       .where(eq(onboardingProgress.id, id))
       .returning();
     return updated;

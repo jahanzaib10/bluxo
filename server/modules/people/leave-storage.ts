@@ -186,7 +186,7 @@ export const leaveStorage = {
 
     const [request] = await db
       .update(leaveRequests)
-      .set({ status: "approved", reviewedById: reviewerId, reviewedAt: now })
+      .set({ status: "approved", reviewedById: reviewerId, reviewedAt: now } as any)
       .where(
         and(
           eq(leaveRequests.id, id),
@@ -219,7 +219,7 @@ export const leaveStorage = {
       const newRemaining = balance.entitled - newUsed + (balance.carried ?? 0);
       await db
         .update(leaveBalances)
-        .set({ used: newUsed, remaining: newRemaining })
+        .set({ used: newUsed, remaining: newRemaining } as any)
         .where(eq(leaveBalances.id, balance.id));
     }
 
@@ -231,7 +231,7 @@ export const leaveStorage = {
 
     const [request] = await db
       .update(leaveRequests)
-      .set({ status: "rejected", reviewedById: reviewerId, reviewedAt: now })
+      .set({ status: "rejected", reviewedById: reviewerId, reviewedAt: now } as any)
       .where(
         and(
           eq(leaveRequests.id, id),

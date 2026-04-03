@@ -38,7 +38,7 @@ export const rolesStorage = {
   ): Promise<Role> {
     const [newRole] = await db
       .insert(roles)
-      .values({ ...data, organizationId, isSystemRole: false })
+      .values({ ...data, organizationId, isSystemRole: false } as any)
       .returning();
     return newRole;
   },
@@ -57,7 +57,7 @@ export const rolesStorage = {
 
     const [updated] = await db
       .update(roles)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...data, updatedAt: new Date() } as any)
       .where(and(eq(roles.id, id), eq(roles.organizationId, organizationId)))
       .returning();
     return updated;
@@ -139,7 +139,7 @@ export const rolesStorage = {
     for (const { key, name } of systemRoleDefinitions) {
       const [newRole] = await db
         .insert(roles)
-        .values({ name, organizationId, isSystemRole: true })
+        .values({ name, organizationId, isSystemRole: true } as any)
         .returning();
 
       const defaultPerms = DEFAULT_ROLE_PERMISSIONS[key];
@@ -167,7 +167,7 @@ export const rolesStorage = {
   ): Promise<boolean> {
     const result = await db
       .update(orgMemberships)
-      .set({ customRoleId: roleId })
+      .set({ customRoleId: roleId } as any)
       .where(
         and(
           eq(orgMemberships.clerkUserId, clerkUserId),
