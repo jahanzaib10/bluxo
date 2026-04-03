@@ -39,6 +39,33 @@ function CommandCenter() {
   );
 }
 
+function InvoicingPlaceholder() {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">Invoicing</h1>
+      <p className="text-muted-foreground mt-2">Coming soon.</p>
+    </div>
+  );
+}
+
+function AccountingPlaceholder() {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">Accounting</h1>
+      <p className="text-muted-foreground mt-2">Coming soon.</p>
+    </div>
+  );
+}
+
+function TaxRulesPlaceholder() {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">Tax Rules</h1>
+      <p className="text-muted-foreground mt-2">Coming soon.</p>
+    </div>
+  );
+}
+
 function OrgRouter() {
   const { activeOrg, isLoaded, hasMultipleOrgs } = useActiveOrg();
 
@@ -97,6 +124,9 @@ function OrgRouter() {
         <Route path="/settings/categories" component={CategoriesSettings} />
         <Route path="/settings/payment-sources" component={PaymentSourcesSettings} />
         <Route path="/settings/user-management" component={UserManagementSettings} />
+        <Route path="/settings/tax-rules" component={TaxRulesPlaceholder} />
+        <Route path="/invoicing" component={InvoicingPlaceholder} />
+        <Route path="/accounting" component={AccountingPlaceholder} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>
