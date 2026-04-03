@@ -17,6 +17,7 @@ import { z } from "zod";
 export * from "./schema/roles";
 export * from "./schema/tax";
 export * from "./schema/invoices";
+export * from "./schema/people-hr";
 
 // Core tables
 export const organizations = pgTable("organizations", {
